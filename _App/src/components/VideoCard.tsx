@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
 import { Play } from 'lucide-react';
