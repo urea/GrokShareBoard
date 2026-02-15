@@ -190,8 +190,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                 </button>
                                 <button
                                     onClick={handleShare}
-                                    disabled={loading || previewImageError}
-                                    className={`bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all ${loading || previewImageError ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}`}
+                                    disabled={loading}
+                                    className={`bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all ${loading ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}`}
                                 >
                                     {loading ? <Loader2 className="animate-spin" /> : <Plus size={18} />}
                                     Share / 投稿する
@@ -226,21 +226,21 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </div>
                                     </div>
                                 ) : previewImageError ? (
-                                    <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-red-400 gap-2">
-                                        <div className="bg-red-900/20 p-2 rounded-full mb-1">
+                                    <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-yellow-400 gap-2">
+                                        <div className="bg-yellow-900/20 p-2 rounded-full mb-1">
                                             <span className="text-xl">⚠️</span>
                                         </div>
-                                        <p className="text-xs font-bold">Unsupported / 非対応</p>
+                                        <p className="text-xs font-bold">Preview Unavailable / プレビュー不可</p>
                                         <p className="text-[10px] leading-tight text-gray-400">
-                                            Image-only posts are not supported.
+                                            Could not load thumbnail, but you can still post.
                                             <br />
-                                            画像のみのポストは非対応です。
+                                            画像が読み込めませんが、投稿は可能です。
                                         </p>
                                         <button
                                             className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
                                             onClick={() => window.open(preview.url, '_blank')}
                                         >
-                                            Open in Grok / Grokで開く
+                                            Check Original / 元ページ確認
                                         </button>
                                     </div>
                                 ) : (
