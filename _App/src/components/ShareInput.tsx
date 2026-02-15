@@ -67,10 +67,17 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             if (existingPost) {
                 // Edit Mode
                 setIsEditing(true);
+
+                // Normalize Image URL to ensure it uses _thumbnail.jpg (Fix for legacy .png data)
+                let dbImageUrl = existingPost.image_url || '';
+                if (dbImageUrl && !dbImageUrl.endsWith('_thumbnail.jpg')) {
+                    dbImageUrl = dbImageUrl.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
+                }
+
                 setPreview({
                     url: existingPost.url,
                     videoUrl: existingPost.video_url || '',
-                    imageUrl: existingPost.image_url || '',
+                    imageUrl: dbImageUrl,
                     siteName: existingPost.site_name || 'Grok',
                     title: existingPost.title || 'Grok Creation',
                     description: existingPost.prompt || '',
