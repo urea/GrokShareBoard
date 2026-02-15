@@ -317,7 +317,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         </div>
 
                         {/* Right: Visual Preview */}
-                        <div className="w-full md:w-48 shrink-0 flex flex-col gap-2">
+                        <div className="w-full max-w-[200px] mx-auto md:max-w-none md:w-48 shrink-0 flex flex-col gap-2">
                             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</label>
                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black border border-gray-700 shadow-md flex items-center justify-center">
 
