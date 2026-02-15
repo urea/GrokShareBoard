@@ -46,5 +46,6 @@ yarn-error.log*
 *.swp
 *.swo
 
-# Temporary / Dev specific
-_Dev/tmp/
+# Dev resources (Private)
+_Dev/
+
