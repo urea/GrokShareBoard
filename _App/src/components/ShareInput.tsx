@@ -332,15 +332,29 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                                             onError={() => {
                                                 console.log("Image load failed:", preview.imageUrl);
-                                                // Fallback logic: Try .png if _thumbnail.jpg fails
+                                                // Fallback logic: 
+                                                // 1. Try .png if _thumbnail.jpg fails
+                                                // 2. Try static .jpg if .png fails
+
                                                 if (preview.imageUrl.includes('_thumbnail.jpg')) {
                                                     console.log("Retrying with .png...");
                                                     setPreview(prev => prev ? ({
                                                         ...prev,
                                                         imageUrl: prev.imageUrl.replace('_thumbnail.jpg', '.png')
                                                     }) : null);
+                                                } else if (preview.imageUrl.endsWith('.png')) {
+                                                    console.log("Retrying with static .jpg...");
+                                                    // Pattern change: /share-videos/UUID.png -> /images/UUID.jpg
+                                                    if (preview.imageUrl.includes('/share-videos/')) {
+                                                        setPreview((prev) => prev ? ({
+                                                            ...prev,
+                                                            imageUrl: prev.imageUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg')
+                                                        }) : null);
+                                                    } else {
+                                                        setPreviewImageError(true);
+                                                    }
                                                 } else {
-                                                    // If already .png or other format, mark as failed
+                                                    // If already .jpg or other format, mark as failed
                                                     console.error("All image candidates failed.");
                                                     setPreviewImageError(true);
                                                 }
