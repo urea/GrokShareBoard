@@ -10,44 +10,80 @@ import { Post } from '@/types';
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const POSTS_PER_PAGE = 24;
+  const APP_VERSION = 'v1.0.1';
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
+    if (loading) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching posts:', error);
-    } else {
-      setPosts(data || []);
+    try {
+      let query = supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(pageNumber * POSTS_PER_PAGE, (pageNumber + 1) * POSTS_PER_PAGE - 1);
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim();
+        query = query.or(`prompt.ilike.%${q}%,user_id.ilike.%${q}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching posts:', error);
+      } else {
+        const newPosts = data || [];
+
+        if (isNewSearch || pageNumber === 0) {
+          setPosts(newPosts);
+        } else {
+          setPosts(prev => [...prev, ...newPosts]);
+        }
+
+        if (newPosts.length < POSTS_PER_PAGE) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(0, true);
   }, []);
 
-  const filteredPosts = posts.filter(post => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (post.prompt && post.prompt.toLowerCase().includes(q)) ||
-      (post.user_id && post.user_id.toLowerCase().includes(q))
-    );
-  });
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(0);
+    setHasMore(true);
+    fetchPosts(0, true);
+  };
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchPosts(nextPage, false);
+  };
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
       {/* Simple Title Bar (Monsnode style: Blue/Solid) */}
       <header className="sticky top-0 z-50 bg-[#0099cc] shadow-md">
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white tracking-wide">
+          <h1 className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2">
             GrokShareBoard
+            <span className="text-xs font-normal opacity-80">{APP_VERSION}</span>
           </h1>
           {/* Optional: Add simple menu or search icon here if needed */}
         </div>
@@ -72,7 +108,11 @@ export default function Home() {
                   <br />
                   以下の利用規約に同意した上で、フォームからGrokのURLを送信してください。
                 </p>
-                <ShareInput onPostCreated={fetchPosts} />
+                <ShareInput onPostCreated={() => {
+                  setPage(0);
+                  setHasMore(true);
+                  fetchPosts(0, true);
+                }} />
               </section>
 
               {/* Usage Rules */}
@@ -92,17 +132,11 @@ export default function Home() {
                     違法なもの、特に18歳未満のポルノを含む動画は絶対に投稿しないでください。
                   </p>
                   <p className="opacity-80 mt-2">
-                    This site is subject to continuous inspection by public authorities, and we actively cooperate with them. We have adopted a zero-tolerance policy for illegal postings, which may include reporting to MCMEC.
+                    We have adopted a zero-tolerance policy for illegal postings. Users are solely responsible for their posts. We reserve the right to remove any content that violates these rules or applicable laws without notice.
                     <br />
-                    当サイトは公的機関による継続的な監視を受けており、捜査に全面的に協力しています。違法な投稿に対してはゼロトレランス方式を採用しており、MCMECへの通報を行う場合があります。
+                    違法な投稿に対してはゼロトレランス方式を採用しています。投稿内容はユーザー自身の責任となります。規約や法律に違反するコンテンツは予告なく削除される場合があります。
                   </p>
                 </div>
-
-                <p className="text-gray-500">
-                  Illegal postings are also very damaging to this site in that they cause a decrease in traffic and require a lot of effort to monitor. We spend more than 60% of our site's operating costs to monitor these links. In order for us to provide a better service, we ask for your cooperation in avoiding illegal postings.
-                  <br />
-                  違法な投稿はサイトの存続に関わる重大な損害を与えます。当サイトは運営費用の60%以上を監視コストに費やしています。より良いサービス継続のため、違法投稿の防止にご協力をお願いします。
-                </p>
               </section>
             </div>
           </details>
@@ -110,35 +144,60 @@ export default function Home() {
 
         {/* Search Bar */}
         <div className="mb-4 flex justify-end">
-          <div className="relative w-full max-w-xs">
-            <input
-              type="text"
-              placeholder="Search / 検索 (User ID, Prompt)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#2a2a2a] border border-gray-600 text-sm text-white pl-8 pr-3 py-1.5 rounded focus:ring-1 focus:ring-[#0099cc] outline-none placeholder-gray-500"
-            />
-            <Search className="absolute left-2.5 top-2 text-gray-500" size={14} />
-          </div>
+          <form onSubmit={handleSearch} className="relative w-full max-w-xs flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search / 検索 (User ID, Prompt)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#2a2a2a] border border-gray-600 text-sm text-white pl-8 pr-3 py-1.5 rounded focus:ring-1 focus:ring-[#0099cc] outline-none placeholder-gray-500"
+              />
+              <Search className="absolute left-2.5 top-2 text-gray-500" size={14} />
+            </div>
+            <button
+              type="submit"
+              className="bg-[#0099cc] text-white px-3 py-1.5 rounded text-sm font-bold hover:bg-[#0088bb] transition-colors"
+            >
+              Go
+            </button>
+          </form>
         </div>
 
         {/* Gallery Grid (Monsnode style: Tight masonry-like grid) */}
         {/* Use minimal gap (gap-1 or gap-2) */}
-        <div className="columns-2 md:columns-4 lg:columns-5 xl:columns-6 gap-1 space-y-1 pb-20 mx-auto">
-          {loading ? (
-            <div className="text-center text-gray-500 col-span-full py-20 text-sm">Loading...</div>
-          ) : filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => (
+        <div className="columns-2 md:columns-4 lg:columns-5 xl:columns-6 gap-1 space-y-1 pb-10 mx-auto">
+          {posts.length > 0 ? (
+            posts.map((post) => (
               <div key={post.id} className="break-inside-avoid mb-1">
                 {/* Force compact mode and pass style prop for overlay look */}
                 <VideoCard post={post} compact={true} overlayStyle={true} />
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 col-span-full py-20 text-sm">
-              No posts found.
-            </div>
+            !loading && (
+              <div className="text-center text-gray-500 col-span-full py-20 text-sm">
+                No posts found.
+              </div>
+            )
           )}
+        </div>
+
+        {/* Load More Button */}
+        <div className="pb-20 text-center">
+          {loading && posts.length === 0 ? (
+            <div className="text-gray-500 text-sm">Loading...</div>
+          ) : hasMore ? (
+            <button
+              onClick={loadMore}
+              disabled={loading}
+              className="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-gray-300 px-8 py-3 rounded-full text-sm font-bold transition-colors border border-gray-700 shadow-md"
+            >
+              {loading ? 'Loading...' : 'Load More / もっと読み込む'}
+            </button>
+          ) : posts.length > 0 ? (
+            <div className="text-gray-600 text-xs">No more posts / これ以上はありません</div>
+          ) : null}
         </div>
       </main>
     </div>
