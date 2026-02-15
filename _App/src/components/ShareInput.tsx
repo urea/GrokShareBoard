@@ -150,7 +150,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 <form onSubmit={handleAnalyze} className="flex gap-2">
                     <input
                         type="url"
-                        placeholder="Paste Grok URL (e.g. https://grok.com/imagine/...)"
+                        placeholder="Paste Grok URL (GrokのURLを貼り付け) ..."
                         className="w-full flex-1 bg-gray-800 border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
@@ -162,7 +162,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 whitespace-nowrap shadow-md shadow-purple-900/20"
                     >
                         {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={18} fill="currentColor" />}
-                        Post GrokImagine
+                        Load / 読み込み
                     </button>
                 </form>
                 {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
@@ -176,7 +176,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         {/* Left: Input Fields */}
                         <div className="flex-1 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">User ID</label>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">User ID / ユーザーID</label>
                                 <input
                                     type="text"
                                     value={editableUserId}
@@ -187,11 +187,11 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description</label>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description (プロンプト・説明)</label>
                                 <textarea
                                     value={editablePrompt}
                                     onChange={(e) => setEditablePrompt(e.target.value)}
-                                    placeholder="Describe the video content or paste the prompt... (Optional)"
+                                    placeholder="Describe the video content or paste the prompt... (Optional) / プロンプトや説明を入力..."
                                     className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
                                     autoFocus
                                 />
@@ -201,17 +201,17 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                 <button
                                     type="button"
                                     onClick={() => setPreview(null)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
                                 >
-                                    Cancel
+                                    Cancel / キャンセル
                                 </button>
                                 <button
                                     onClick={handleShare}
-                                    disabled={loading}
-                                    className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all hover:scale-105 active:scale-95"
+                                    disabled={loading || previewImageError}
+                                    className={`bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all ${loading || previewImageError ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}`}
                                 >
                                     {loading ? <Loader2 className="animate-spin" /> : <Plus size={18} />}
-                                    Share Post
+                                    Share / 投稿する
                                 </button>
                             </div>
                         </div>
@@ -247,21 +247,23 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         <div className="bg-red-900/20 p-2 rounded-full mb-1">
                                             <span className="text-xl">⚠️</span>
                                         </div>
-                                        <p className="text-xs font-bold">Unsupported Post Type</p>
+                                        <p className="text-xs font-bold">Unsupported / 非対応</p>
                                         <p className="text-[10px] leading-tight text-gray-400">
-                                            Image-only posts use Base64 embedding and lack a public thumbnail URL.
+                                            Image-only posts are not supported.
+                                            <br />
+                                            画像のみのポストは非対応です。
                                         </p>
                                         <button
                                             className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
                                             onClick={() => window.open(preview.url, '_blank')}
                                         >
-                                            View original on Grok
+                                            Open in Grok / Grokで開く
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
                                         <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-xs">Fetching Thumbnail...</span>
+                                        <span className="text-xs text-center">Loading / 読み込み中...</span>
                                     </div>
                                 )}
                             </div>
