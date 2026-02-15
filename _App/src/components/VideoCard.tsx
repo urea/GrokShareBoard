@@ -18,6 +18,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
         if (!url) return '/placeholder.png';
         // If it's a Grok video/image URL, ensure it uses _thumbnail.jpg
         if (url.includes('imagine-public.x.ai') && url.includes('/share-videos/')) {
+            // If it already ends with _thumbnail.jpg, return as is
+            if (url.endsWith('_thumbnail.jpg')) return url;
             // Replace .png, .mp4, or just ensure it ends with _thumbnail.jpg
             // Regex to strip existing extension and suffix
             return url.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
@@ -42,6 +44,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                     <img
                         src={displayImageUrl}
                         alt={post.prompt || 'Grok generation'}
+                        referrerPolicy="no-referrer"
                         className="absolute inset-0 w-full h-full object-cover"
                         onError={() => setImageError(true)}
                         loading="lazy"

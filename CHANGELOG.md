@@ -1,5 +1,12 @@
 # 更新履歴
 
+## [1.0.5] - 2026-02-15
+
+### 修正
+- **画像読み込み不具合の修正**:
+  - `VideoCard.tsx` でサムネイルURLが二重に生成されるバグ (`_thumbnail_thumbnail.jpg`) を修正。
+  - `ShareInput.tsx` および `VideoCard.tsx` の画像読み込みに `referrerPolicy="no-referrer"` を追加し、ブラウザによる403エラーを回避。
+
 ## [1.0.4] - 2026-02-15
 
 ### 修正

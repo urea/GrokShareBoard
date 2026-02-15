@@ -210,6 +210,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         <img
                                             src={preview.imageUrl}
                                             alt="Thumbnail"
+                                            referrerPolicy="no-referrer"
                                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                                             onError={() => {
                                                 console.error("Image load failed");
