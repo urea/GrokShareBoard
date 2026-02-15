@@ -27,94 +27,58 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
 
     // Use the patched URL
     const displayImageUrl = getValidImageUrl(post.image_url);
-
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [imageError, setImageError] = useState(false);
-
-    const handleMouseEnter = async () => {
-        if (!post.video_url || !videoRef.current) return;
-        setIsPlaying(true);
-        try {
-            await videoRef.current.play();
-        } catch (e: any) {
-            // AbortError is expected if user leaves quickly, ignore it.
-            if (e.name !== 'AbortError') {
-                console.warn("Play failed", e);
-            }
-        }
-    };
-
-    const handleMouseLeave = () => {
-        setIsPlaying(false);
-        if (videoRef.current) {
-            videoRef.current.pause();
-            videoRef.current.currentTime = 0;
-        }
-    };
 
     return (
         <motion.div
             className="relative group rounded-xl overflow-hidden bg-gray-900 border border-gray-800 shadow-lg cursor-pointer"
             whileHover={{ scale: 1.02 }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
             onClick={() => window.open(post.url, '_blank')}
         >
             <div className="aspect-[2/3] relative w-full bg-black">
-
-                {/* Video Player (Visible if playing OR if image failed to load, and video is loaded) */}
-                {post.video_url && (
-                    <video
-                        ref={videoRef}
-                        src={post.video_url}
-                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isPlaying && !imageError ? 'opacity-100' : 'opacity-0'}`}
-                        muted
-                        loop
-                        playsInline
-                        preload="none" // Only load on hover
-                        onError={(e) => {
-                            console.warn("VideoCard play error", e);
-                            setImageError(false); // Fallback to image
-                        }}
-                    />
-                )}
-
-                {/* Thumbnail Image (Hidden if playing OR if validation failed) */}
-                {!imageError && (
+                {/* Thumbnail Image */}
+                {!imageError ? (
                     <img
                         src={displayImageUrl}
                         alt={post.prompt || 'Grok generation'}
-                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'}`}
+                        className="absolute inset-0 w-full h-full object-cover"
                         onError={() => setImageError(true)}
+                        loading="lazy"
                     />
-                )}
-
-                {/* Play Icon Overlay */}
-                {!isPlaying && post.video_url && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-transparent transition-colors">
-                        {/* Scale down play icon further for dense grid */}
-                        <Play className="w-10 h-10 text-white/70 drop-shadow-md" fill="currentColor" />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center">
+                        Image Unavailable
                     </div>
                 )}
 
                 {/* Overlays (Monsnode Style) */}
                 {overlayStyle && (
-                    <>
-                        <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
-                            <div className="flex justify-between items-end">
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
+                        <div className="flex flex-col gap-1">
+                            {/* Prompt/Comment */}
+                            {post.prompt && (
+                                <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md">
+                                    {post.prompt}
+                                </p>
+                            )}
+
+                            {/* User ID */}
+                            <div className="flex justify-between items-end mt-1">
                                 {post.user_id && (
-                                    <span className="bg-blue-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold shadow-sm pointer-events-auto">
+                                    <span className="bg-blue-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold shadow-sm pointer-events-auto opacity-80 group-hover:opacity-100 transition-opacity">
                                         <a href={`/user?id=${post.user_id}`} onClick={(e) => e.stopPropagation()}>{post.user_id}</a>
                                     </span>
                                 )}
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
 
-            {/* Bottom Info Area - render only if NOT using overlayStyle */}
+            {/* Bottom Info Area - Only show if strict compact mode isn't forcing overlay-only, 
+                BUT user requested prompt display. If overlayStyle is used, prompt is now inside image.
+                If overlayStyle is FALSE, we keep the original bottom area. 
+            */}
             {!overlayStyle && (
                 <div className={`${compact ? 'p-2' : 'p-3'}`}>
                     {!compact && (
