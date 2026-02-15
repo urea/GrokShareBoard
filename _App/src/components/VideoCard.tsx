@@ -28,6 +28,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     // Use the patched URL
     const displayImageUrl = getValidImageUrl(post.image_url);
     const [imageError, setImageError] = useState(false);
+    const [showFullPrompt, setShowFullPrompt] = useState(false);
 
     return (
         <motion.div
@@ -54,18 +55,29 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                 {/* Overlays (Monsnode Style) */}
                 {overlayStyle && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 pointer-events-auto">
                             {/* Prompt/Comment */}
                             {post.prompt && (
-                                <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md">
-                                    {post.prompt}
-                                </p>
+                                <div>
+                                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md mb-1">
+                                        {post.prompt}
+                                    </p>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullPrompt(true);
+                                        }}
+                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
+                                    >
+                                        More / 全文
+                                    </button>
+                                </div>
                             )}
 
                             {/* User ID */}
                             <div className="flex justify-between items-end mt-1">
                                 {post.user_id && (
-                                    <span className="bg-blue-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold shadow-sm pointer-events-auto opacity-80 group-hover:opacity-100 transition-opacity">
+                                    <span className="bg-blue-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
                                         <a href={`/user?id=${post.user_id}`} onClick={(e) => e.stopPropagation()}>{post.user_id}</a>
                                     </span>
                                 )}
@@ -74,6 +86,38 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                     </div>
                 )}
             </div>
+
+            {/* Full Prompt Overlay Modal */}
+            {showFullPrompt && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowFullPrompt(false);
+                    }}
+                >
+                    <div
+                        className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setShowFullPrompt(false)}
+                            className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                        >
+                            ✕ Close
+                        </button>
+                        <h3 className="text-sm font-bold text-gray-400 mb-2">Prompt / Description</h3>
+                        <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+                            {post.prompt}
+                        </p>
+                        {post.user_id && (
+                            <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
+                                Posted by: <span className="text-blue-400">@{post.user_id}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Info Area - Only show if strict compact mode isn't forcing overlay-only, 
                 BUT user requested prompt display. If overlayStyle is used, prompt is now inside image.
