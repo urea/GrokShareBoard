@@ -4,7 +4,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Play } from 'lucide-react';
+import { Play, Copy } from 'lucide-react';
 
 interface VideoCardProps {
     post: Post;
@@ -122,12 +122,32 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                             className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <button
-                                onClick={() => setShowFullPrompt(false)}
-                                className="absolute top-3 right-3 text-gray-400 hover:text-white"
-                            >
-                                ✕ Close
-                            </button>
+                            <div className="absolute top-3 right-3 flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        if (!post.prompt) return;
+                                        navigator.clipboard.writeText(post.prompt);
+                                        const btn = document.getElementById('copy-btn-' + post.id);
+                                        if (btn) {
+                                            const originalText = btn.innerHTML;
+                                            btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
+                                            setTimeout(() => {
+                                                btn.innerHTML = originalText;
+                                            }, 2000);
+                                        }
+                                    }}
+                                    id={`copy-btn-${post.id}`}
+                                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
+                                >
+                                    <Copy size={14} /> Copy
+                                </button>
+                                <button
+                                    onClick={() => setShowFullPrompt(false)}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    ✕ Close
+                                </button>
+                            </div>
                             <h3 className="text-sm font-bold text-gray-400 mb-2">Prompt / Description</h3>
                             <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
                                 {post.prompt}
