@@ -52,6 +52,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                             // 1. _thumbnail.jpg (Default) -> Fails
                             // 2. Try .png (High res video frame)
                             // 3. Try .jpg (Static image post path: .../images/[UUID].jpg)
+                            // 4. Try circular fallback (JPG -> Thumbnail) if broken link
 
                             const target = e.currentTarget;
                             const currentSrc = target.src;
@@ -67,51 +68,25 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                 } else {
                                     setImageError(true);
                                 }
-                                setImageError(true);
-                            }
-                        } else if (currentSrc.includes('/images/') && currentSrc.endsWith('.jpg')) {
-                                // 4. Circular fallback: If static .jpg fails, it might be a broken link saved in DB.
-                                // Try reverting to _thumbnail.jpg (Standard Video)
-                                // Prevent infinite loop by checking if we already tried thumbnail (hard to track stateless, 
-                                // but standard flow usually starts with thumbnail. If DB has JPG, we start here.)
-                                // We assume if we started with JPG, we haven't tried thumbnail in THIS session yet.
-                                // Risk: if thumbnail redirects to JPG, and JPG fails... loop.
-                                // But thumbnail 404s, so unlikely to redirect.
-                                
+                            } else if (currentSrc.includes('/images/') && currentSrc.endsWith('.jpg')) {
+                                // Circular fallback: If static .jpg fails, try reverting to _thumbnail.jpg
                                 const canonicalThumbnail = currentSrc.replace('/images/', '/share-videos/').replace('.jpg', '_thumbnail.jpg');
-                // Only try if different (sanity check)
-                if (canonicalThumbnail !== currentSrc) {
-                    target.src = canonicalThumbnail;
-                // NOTE: Providing a way to stop loop would be better, but standard browser error handling 
-                // usually stops if same URL fails again? No, src change triggers new load.
-                // We hope canonicalThumbnail is either valid or 404s.
-                // If canonicalThumbnail 404s, it triggers onError again.
-                // In 'onError' for thumbnail, we go to PNG.
-                // In 'onError' for PNG, we go to JPG.
-                // Infinite Loop Risk!
-
-                // Mitigation: Do not retry if we suspect loop.
-                // This is complex. For now, let's assume "broken DB state" is rare and manual fix is better?
-                // OR: user reported "image didn't show".
-                // Let's NOT do circular loop automatically to avoid browser crash.
-                // Instead, we fixed the SAVING logic in ShareInput, so new posts are fine.
-                // For the ONE broken post, the user can "Update" it.
-
-                setImageError(true);
+                                if (canonicalThumbnail !== currentSrc) {
+                                    target.src = canonicalThumbnail;
                                 } else {
-                    setImageError(true);
+                                    setImageError(true);
                                 }
                             } else {
-                    // Give up
-                    setImageError(true);
+                                // Give up
+                                setImageError(true);
                             }
                         }}
-                loading="lazy"
+                        loading="lazy"
                     />
                 ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center">
-                    Image Unavailable
-                </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center">
+                        Image Unavailable
+                    </div>
                 )}
 
                 {/* Overlays (Monsnode Style) */}
