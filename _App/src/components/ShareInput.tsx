@@ -21,22 +21,22 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState<PreviewData | null>(null);
     const [editablePrompt, setEditablePrompt] = useState('');
-    const [editableUserId, setEditableUserId] = useState('');
+    // const [editableUserId, setEditableUserId] = useState(''); // Abolished
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
 
 
 
-    // Load saved User ID on mount
-    useEffect(() => {
-        const savedUserId = localStorage.getItem('grok_share_userid');
-        if (savedUserId) {
-            setEditableUserId(savedUserId);
+    // Generate or retrieve anonymous Client ID
+    const getOrCreateClientId = () => {
+        let clientId = localStorage.getItem('grok_share_client_id');
+        if (!clientId) {
+            clientId = crypto.randomUUID();
+            localStorage.setItem('grok_share_client_id', clientId);
         }
-    }, []);
-
-
+        return clientId;
+    };
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,7 +70,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
                 // Normalize Image URL to ensure it uses _thumbnail.jpg (Fix for legacy .png data)
                 let dbImageUrl = existingPost.image_url || '';
-                if (dbImageUrl && !dbImageUrl.endsWith('_thumbnail.jpg')) {
+                if (dbImageUrl && !dbImageUrl.endsWith('_thumbnail.jpg') && !dbImageUrl.endsWith('.png') && !dbImageUrl.endsWith('.jpg')) {
                     dbImageUrl = dbImageUrl.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
                 }
 
@@ -84,7 +84,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     userId: existingPost.user_id
                 });
                 setEditablePrompt(existingPost.prompt || '');
-                setEditableUserId(existingPost.user_id || '');
+                // setEditableUserId(existingPost.user_id || ''); // Abolished
                 setLoading(false);
                 return;
             }
@@ -92,8 +92,6 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Construct public URLs
             // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
             // Image (Thumbnail): https://imagine-public.x.ai/imagine-public/share-videos/[UUID]_thumbnail.jpg
-            // Note: High-res images have randomized UUIDs and cannot be guessed client-side. 
-            // We use the thumbnail/poster image which follows the predictable UUID pattern.
             const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
             const imageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg`;
 
@@ -108,11 +106,6 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             };
 
             setPreview(mockPreview);
-            // setEditablePrompt(''); // Retain previous input if any, or clear? Better clear to match new URL.
-            // Actually manual entry usually means empty prompt initially.
-            // But if user typed prompt BEFORE clicking load (unlikely flow), we might want to keep it?
-            // Standard flow is Paste URL -> Load -> Type Prompt.
-            // So clearing is safe.
 
         } catch (err: any) {
             setError(err.message || 'Error analyzing URL');
@@ -126,21 +119,22 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         if (!preview) return;
         setLoading(true);
         try {
+            // Use existing User ID if present (creator), or current client ID if missing
+            // Actually, for integrity, we should NOT change the user_id on update if it exists.
+            // But if it's null, we can adopt it.
+            // Let's just keep the original user_id. We don't update it.
+
             const { data: updatedData, error: updateError } = await supabase
                 .from('posts')
                 .update({
                     prompt: editablePrompt,
-                    user_id: editableUserId.trim() || null,
+                    // user_id: editableUserId.trim() || null, // Abolished: Do not update user_id
                 })
                 .eq('url', preview.url)
                 .select('id');
 
             if (updateError) throw updateError;
             if (!updatedData || updatedData.length === 0) throw new Error('Update failed: Permission denied or post not found. check RLS policies. / 更新失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
-
-            if (editableUserId.trim()) {
-                localStorage.setItem('grok_share_userid', editableUserId.trim());
-            }
 
             // Success state
             setUrl('');
@@ -190,13 +184,15 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
         setLoading(true);
         try {
+            const clientId = getOrCreateClientId();
+
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert([
                     {
                         url: preview.url,
                         prompt: editablePrompt,
-                        user_id: editableUserId.trim() || null,
+                        user_id: clientId, // Use anonymous Client ID
                         video_url: preview.videoUrl,
                         image_url: preview.imageUrl,
                         site_name: preview.siteName,
@@ -209,10 +205,6 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             if (insertError) {
                 if (insertError.code === '23505') throw new Error('URL already shared!');
                 throw insertError;
-            }
-
-            if (editableUserId.trim()) {
-                localStorage.setItem('grok_share_userid', editableUserId.trim());
             }
 
             setUrl('');
@@ -258,16 +250,13 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
                         {/* Left: Input Fields */}
                         <div className="flex-1 space-y-4">
+                            {/* User ID Field Removed */}
+                            {/* 
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">User ID / ユーザーID</label>
-                                <input
-                                    type="text"
-                                    value={editableUserId}
-                                    onChange={(e) => setEditableUserId(e.target.value)}
-                                    placeholder="e.g. your_x_handle"
-                                    className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
+                                <input ... />
                             </div>
+                            */}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description (プロンプト・説明)</label>

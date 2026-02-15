@@ -102,14 +102,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                 </div>
                             )}
 
-                            {/* User ID */}
-                            <div className="flex justify-between items-end mt-1">
-                                {post.user_id && (
-                                    <span className="bg-blue-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                                        <a href={`/user?id=${post.user_id}`} onClick={(e) => e.stopPropagation()}>{post.user_id}</a>
-                                    </span>
-                                )}
-                            </div>
+                            {/* User ID Removed */}
                         </div>
                     </div>
                 )}
@@ -139,11 +132,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                             <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
                                 {post.prompt}
                             </p>
-                            {post.user_id && (
-                                <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
-                                    Posted by: <span className="text-blue-400">@{post.user_id}</span>
-                                </div>
-                            )}
+                            {/* User ID Removed */}
                         </div>
                     </div>
                 </ModalPortal>
@@ -163,13 +152,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                     <div className={`text-gray-500 flex justify-between items-center ${compact ? 'text-[10px]' : 'text-xs'}`}>
                         <span className="flex gap-2 items-center">
                             {!compact && new Date(post.created_at).toLocaleDateString()}
-                            {compact && post.user_id ? (
-                                <span className="truncate max-w-[60px] text-blue-400" title={post.user_id}>@{post.user_id}</span>
-                            ) : post.user_id && (
-                                <a href={`/user?id=${post.user_id}`} onClick={(e) => e.stopPropagation()} className="text-blue-400 hover:text-blue-300 hover:underline z-10 relative">
-                                    User
-                                </a>
-                            )}
+                            {/* User ID removed */}
                         </span>
                         {!compact && <span>{post.site_name || 'Grok'}</span>}
                     </div>
