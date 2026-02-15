@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Plus, Sparkles, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, Sparkles, RefreshCw, Trash2, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Define local interface for Preview Data
@@ -24,6 +24,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [editableUserId, setEditableUserId] = useState('');
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
 
 
 
@@ -45,7 +46,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         setPreview(null);
         setEditablePrompt('');
         setPreviewImageError(false);
-        setPreviewImageError(false);
+        setIsEditing(false);
 
         try {
             // Client-side regex extraction (GitHub Pages compatible)
@@ -55,6 +56,31 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 throw new Error('Invalid Grok URL format. Could not find UUID.');
             }
             const uuid = uuidMatch[1];
+
+            // Check if URL already exists in DB
+            const { data: existingPost, error: fetchError } = await supabase
+                .from('posts')
+                .select('*')
+                .eq('url', url)
+                .single();
+
+            if (existingPost) {
+                // Edit Mode
+                setIsEditing(true);
+                setPreview({
+                    url: existingPost.url,
+                    videoUrl: existingPost.video_url || '',
+                    imageUrl: existingPost.image_url || '',
+                    siteName: existingPost.site_name || 'Grok',
+                    title: existingPost.title || 'Grok Creation',
+                    description: existingPost.prompt || '',
+                    userId: existingPost.user_id
+                });
+                setEditablePrompt(existingPost.prompt || '');
+                setEditableUserId(existingPost.user_id || '');
+                setLoading(false);
+                return;
+            }
 
             // Construct public URLs
             // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
@@ -75,11 +101,74 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             };
 
             setPreview(mockPreview);
-            setEditablePrompt('');
+            // setEditablePrompt(''); // Retain previous input if any, or clear? Better clear to match new URL.
+            // Actually manual entry usually means empty prompt initially.
+            // But if user typed prompt BEFORE clicking load (unlikely flow), we might want to keep it?
+            // Standard flow is Paste URL -> Load -> Type Prompt.
+            // So clearing is safe.
 
         } catch (err: any) {
             setError(err.message || 'Error analyzing URL');
             console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdate = async () => {
+        if (!preview) return;
+        setLoading(true);
+        try {
+            const { error: updateError } = await supabase
+                .from('posts')
+                .update({
+                    prompt: editablePrompt,
+                    user_id: editableUserId.trim() || null,
+                })
+                .eq('url', preview.url);
+
+            if (updateError) throw updateError;
+
+            if (editableUserId.trim()) {
+                localStorage.setItem('grok_share_userid', editableUserId.trim());
+            }
+
+            // Success state
+            setUrl('');
+            setPreview(null);
+            setEditablePrompt('');
+            setIsEditing(false);
+            onPostCreated(); // Refresh feed
+            alert('Post updated successfully! / 投稿を更新しました');
+        } catch (err: any) {
+            setError(err.message || 'Error updating post');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!preview) return;
+        if (!confirm('Are you sure you want to delete this post? / 本当にこの投稿を削除しますか？')) return;
+
+        setLoading(true);
+        try {
+            const { error: deleteError } = await supabase
+                .from('posts')
+                .delete()
+                .eq('url', preview.url);
+
+            if (deleteError) throw deleteError;
+
+            // Success state
+            setUrl('');
+            setPreview(null);
+            setEditablePrompt('');
+            setIsEditing(false);
+            onPostCreated(); // Refresh feed
+            alert('Post deleted successfully! / 投稿を削除しました');
+        } catch (err: any) {
+            setError(err.message || 'Error deleting post');
         } finally {
             setLoading(false);
         }
@@ -181,6 +270,17 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             </div>
 
                             <div className="flex justify-end gap-3 pt-2">
+                                {isEditing && (
+                                    <button
+                                        type="button"
+                                        onClick={handleDelete}
+                                        disabled={loading}
+                                        className="px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-sm flex items-center gap-1 mr-auto"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete / 削除
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     onClick={() => setPreview(null)}
@@ -189,12 +289,19 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     Cancel / キャンセル
                                 </button>
                                 <button
-                                    onClick={handleShare}
+                                    onClick={isEditing ? handleUpdate : handleShare}
                                     disabled={loading}
-                                    className={`bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-green-900/20 transition-all ${loading ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}`}
+                                    className={`
+                                        px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all
+                                        ${isEditing
+                                            ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20 text-white'
+                                            : 'bg-green-600 hover:bg-green-500 shadow-green-900/20 text-white'
+                                        }
+                                        ${loading ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}
+                                    `}
                                 >
-                                    {loading ? <Loader2 className="animate-spin" /> : <Plus size={18} />}
-                                    Share / 投稿する
+                                    {loading ? <Loader2 className="animate-spin" /> : isEditing ? <RefreshCw size={18} /> : <Plus size={18} />}
+                                    {isEditing ? 'Update / 更新する' : 'Share / 投稿する'}
                                 </button>
                             </div>
                         </div>
