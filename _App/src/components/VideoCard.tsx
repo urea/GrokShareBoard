@@ -16,12 +16,13 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     // Helper to enforce the correct thumbnail pattern [UUID]_thumbnail.jpg
     const getValidImageUrl = (url: string | null) => {
         if (!url) return '/placeholder.png';
-        // If it's a Grok video/image URL, ensure it uses _thumbnail.jpg
-        if (url.includes('imagine-public.x.ai') && url.includes('/share-videos/')) {
-            // If it already ends with _thumbnail.jpg, return as is
-            if (url.endsWith('_thumbnail.jpg')) return url;
-            // Replace .png, .mp4, or just ensure it ends with _thumbnail.jpg
-            // Regex to strip existing extension and suffix
+
+        // If it's a Grok video/image URL
+        if (url.includes('imagine-public.x.ai')) {
+            // If it already ends with _thumbnail.jpg or .png or .jpg, return as is (Trust the DB if it was updated by ShareInput)
+            if (url.endsWith('_thumbnail.jpg') || url.endsWith('.png') || url.endsWith('.jpg')) return url;
+
+            // Default fallback for raw UUIDs or old data: try thumbnail
             return url.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
         }
         return url;
@@ -46,7 +47,31 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                         alt={post.prompt || 'Grok generation'}
                         referrerPolicy="no-referrer"
                         className="absolute inset-0 w-full h-full object-cover"
-                        onError={() => setImageError(true)}
+                        onError={(e) => {
+                            // Multi-stage fallback:
+                            // 1. _thumbnail.jpg (Default) -> Fails
+                            // 2. Try .png (High res video frame)
+                            // 3. Try .jpg (Static image post path: .../images/[UUID].jpg)
+
+                            const target = e.currentTarget;
+                            const currentSrc = target.src;
+
+                            if (currentSrc.includes('_thumbnail.jpg')) {
+                                // Try .png next
+                                target.src = currentSrc.replace('_thumbnail.jpg', '.png');
+                            } else if (currentSrc.endsWith('.png')) {
+                                // Try static image path .jpg
+                                // Note: Path changes from /share-videos/ to /images/
+                                if (currentSrc.includes('/share-videos/')) {
+                                    target.src = currentSrc.replace('/share-videos/', '/images/').replace('.png', '.jpg');
+                                } else {
+                                    setImageError(true);
+                                }
+                            } else {
+                                // Give up
+                                setImageError(true);
+                            }
+                        }}
                         loading="lazy"
                     />
                 ) : (
