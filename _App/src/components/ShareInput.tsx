@@ -124,10 +124,20 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // But if it's null, we can adopt it.
             // Let's just keep the original user_id. We don't update it.
 
+            // If image preview failed, fallback to canonical thumbnail URL
+            let finalImageUrl = preview.imageUrl;
+            if (previewImageError) {
+                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
+                if (uuidMatch) {
+                    finalImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                }
+            }
+
             const { data: updatedData, error: updateError } = await supabase
                 .from('posts')
                 .update({
                     prompt: editablePrompt,
+                    image_url: finalImageUrl,
                     // user_id: editableUserId.trim() || null, // Abolished: Do not update user_id
                 })
                 .eq('url', preview.url)
@@ -186,6 +196,16 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         try {
             const clientId = getOrCreateClientId();
 
+            // If image preview failed, fallback to canonical thumbnail URL (best guess for future)
+            // instead of saving the last failed attempt (e.g. .jpg)
+            let finalImageUrl = preview.imageUrl;
+            if (previewImageError) {
+                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
+                if (uuidMatch) {
+                    finalImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                }
+            }
+
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert([
@@ -194,7 +214,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         prompt: editablePrompt,
                         user_id: clientId, // Use anonymous Client ID
                         video_url: preview.videoUrl,
-                        image_url: preview.imageUrl,
+                        image_url: finalImageUrl,
                         site_name: preview.siteName,
                         title: preview.title,
                         width: 0,
