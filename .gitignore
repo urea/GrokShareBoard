@@ -1,0 +1,50 @@
+
+# Dependencies
+node_modules/
+u/node_modules/
+_App/node_modules/
+
+# Next.js
+.next/
+_App/.next/
+out/
+_App/out/
+build/
+dist/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# User Data / Database
+*.db
+*.sqlite
+*.sqlite3
+_Data/*.db
+_Data/*.sqlite
+_Data/*.sqlite3
+# Keep .keep or similar if empty folders need tracking, but usually not needed for _Data if app creates it.
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary / Dev specific
+_Dev/tmp/
