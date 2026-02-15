@@ -222,13 +222,16 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black border border-gray-700 shadow-md flex items-center justify-center">
 
                                 {/* Thumbnail Image Only (User requested to prioritize image) */}
-                                {preview.imageUrl ? (
+                                {preview.imageUrl && !previewImageError ? (
                                     <div className="relative w-full h-full group cursor-pointer" onClick={() => window.open(preview.url, '_blank')}>
                                         <img
                                             src={preview.imageUrl}
                                             alt="Thumbnail"
                                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-                                            onError={() => setPreviewImageError(true)}
+                                            onError={() => {
+                                                console.error("Image load failed");
+                                                setPreviewImageError(true);
+                                            }}
                                             onLoad={() => setLoading(false)}
                                         />
 
@@ -238,6 +241,22 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 <Sparkles size={16} className="text-white" />
                                             </div>
                                         </div>
+                                    </div>
+                                ) : previewImageError ? (
+                                    <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-red-400 gap-2">
+                                        <div className="bg-red-900/20 p-2 rounded-full mb-1">
+                                            <span className="text-xl">⚠️</span>
+                                        </div>
+                                        <p className="text-xs font-bold">Unsupported Post Type</p>
+                                        <p className="text-[10px] leading-tight text-gray-400">
+                                            Image-only posts use Base64 embedding and lack a public thumbnail URL.
+                                        </p>
+                                        <button
+                                            className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
+                                            onClick={() => window.open(preview.url, '_blank')}
+                                        >
+                                            View original on Grok
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
