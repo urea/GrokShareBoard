@@ -25,10 +25,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
 
-    // Video Retry State
-    const [videoError, setVideoError] = useState(false);
-    const [retryCount, setRetryCount] = useState(0);
-    const videoRef = useRef<HTMLVideoElement>(null);
+    // Video Retry State - Removed as we don't show video
+    const [previewImageError, setPreviewImageError] = useState(false);
+    const [error, setError] = useState('');
 
     // Load saved User ID on mount
     useEffect(() => {
@@ -38,20 +37,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         }
     }, []);
 
-    // Retry Logic for Video
-    useEffect(() => {
-        if (videoError && preview?.videoUrl && retryCount < 10) {
-            const timeout = setTimeout(() => {
-                console.log(`Retrying video load... attempt ${retryCount + 1}`);
-                setVideoError(false);
-                setRetryCount(prev => prev + 1);
-                if (videoRef.current) {
-                    videoRef.current.load();
-                }
-            }, 3000); // Retry every 3 seconds
-            return () => clearTimeout(timeout);
-        }
-    }, [videoError, retryCount, preview]);
+
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -61,8 +47,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         setPreview(null);
         setEditablePrompt('');
         setPreviewImageError(false);
-        setVideoError(false);
-        setRetryCount(0);
+        setPreviewImageError(false);
 
         try {
             // Client-side regex extraction (GitHub Pages compatible)
