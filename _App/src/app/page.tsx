@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search } from 'lucide-react';
+import { Search, FileText, History } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 
@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.4';
+  const APP_VERSION = 'v1.1.5';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -85,7 +85,28 @@ export default function Home() {
             GrokShareBoard
             <span className="text-xs font-normal opacity-80">{APP_VERSION}</span>
           </h1>
-          {/* Optional: Add simple menu or search icon here if needed */}
+
+          {/* Header Links */}
+          <div className="flex items-center gap-4">
+            <a
+              href="https://github.com/urea/GrokShareBoard/blob/main/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/80 hover:text-white transition-colors"
+              title="README"
+            >
+              <FileText size={20} />
+            </a>
+            <a
+              href="https://github.com/urea/GrokShareBoard/blob/main/CHANGELOG.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/80 hover:text-white transition-colors"
+              title="CHANGELOG"
+            >
+              <History size={20} />
+            </a>
+          </div>
         </div>
       </header>
 

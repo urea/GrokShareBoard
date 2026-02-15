@@ -331,8 +331,19 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             referrerPolicy="no-referrer"
                                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                                             onError={() => {
-                                                console.error("Image load failed");
-                                                setPreviewImageError(true);
+                                                console.log("Image load failed:", preview.imageUrl);
+                                                // Fallback logic: Try .png if _thumbnail.jpg fails
+                                                if (preview.imageUrl.includes('_thumbnail.jpg')) {
+                                                    console.log("Retrying with .png...");
+                                                    setPreview(prev => prev ? ({
+                                                        ...prev,
+                                                        imageUrl: prev.imageUrl.replace('_thumbnail.jpg', '.png')
+                                                    }) : null);
+                                                } else {
+                                                    // If already .png or other format, mark as failed
+                                                    console.error("All image candidates failed.");
+                                                    setPreviewImageError(true);
+                                                }
                                             }}
                                             onLoad={() => setLoading(false)}
                                         />
