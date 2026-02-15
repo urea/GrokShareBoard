@@ -90,36 +90,38 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                 )}
             </div>
 
-            {/* Full Prompt Overlay Modal */}
+            {/* Full Prompt Overlay Modal - Using Portal to escape stacking context */}
             {showFullPrompt && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setShowFullPrompt(false);
-                    }}
-                >
+                <ModalPortal>
                     <div
-                        className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
-                        onClick={(e) => e.stopPropagation()}
+                        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowFullPrompt(false);
+                        }}
                     >
-                        <button
-                            onClick={() => setShowFullPrompt(false)}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                        <div
+                            className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            ✕ Close
-                        </button>
-                        <h3 className="text-sm font-bold text-gray-400 mb-2">Prompt / Description</h3>
-                        <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
-                            {post.prompt}
-                        </p>
-                        {post.user_id && (
-                            <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
-                                Posted by: <span className="text-blue-400">@{post.user_id}</span>
-                            </div>
-                        )}
+                            <button
+                                onClick={() => setShowFullPrompt(false)}
+                                className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                            >
+                                ✕ Close
+                            </button>
+                            <h3 className="text-sm font-bold text-gray-400 mb-2">Prompt / Description</h3>
+                            <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+                                {post.prompt}
+                            </p>
+                            {post.user_id && (
+                                <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
+                                    Posted by: <span className="text-blue-400">@{post.user_id}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
 
             {/* Bottom Info Area - Only show if strict compact mode isn't forcing overlay-only, 
@@ -150,4 +152,14 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
             )}
         </motion.div>
     );
+}
+
+// Simple Portal Component
+import { createPortal } from 'react-dom';
+
+function ModalPortal({ children }: { children: React.ReactNode }) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(children, document.body);
 }

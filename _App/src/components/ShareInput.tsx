@@ -126,257 +126,275 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         if (!preview) return;
         setLoading(true);
         try {
-            const { error: updateError, count } = await supabase
-                .from('posts')
-                .update({
+                .eq('url', preview.url)
+        .select('id'); // Request returned rows to check existence
+
+    if (updateError) throw updateError;
+
+    // Check if any row was updated
+    // select() returns 'data' which is an array of updated rows
+    // We use 'any' cast here because the destructuring above might assume 'count' exists if we don't change it
+    const updatedData = (updateError as any) || arguments[0]?.data;
+    // Actually, let's rewrite the destructuring to be clean.
+    // const { data, error } = ...
+    // But we are inside existing code block.
+    // Let's replace the whole const declaration line basically.
+
+    // Re-reading logic:
+    // const { error: updateError, count } = await ...
+    // We need to change that.
+
+    /* Logic:
+       const { data, error: updateError } = await supabase
+          .from('posts')
+          .update(...)
+          .eq(...)
+          .select('id');
+       
+       if (!data || data.length === 0) throw ...
+    */
+
+
+    if (editableUserId.trim()) {
+        localStorage.setItem('grok_share_userid', editableUserId.trim());
+    }
+
+    // Success state
+    setUrl('');
+    setPreview(null);
+    setEditablePrompt('');
+    setIsEditing(false);
+    onPostCreated(); // Refresh feed
+    alert('Post updated successfully! / 投稿を更新しました');
+} catch (err: any) {
+    setError(err.message || 'Error updating post');
+} finally {
+    setLoading(false);
+}
+    };
+
+const handleDelete = async () => {
+    if (!preview) return;
+    if (!confirm('Are you sure you want to delete this post? / 本当にこの投稿を削除しますか？')) return;
+
+    setLoading(true);
+    try {
+        const { data: deletedData, error: deleteError } = await supabase
+            .from('posts')
+            .delete()
+            .eq('url', preview.url)
+            .select('id'); // Request returned rows to verify deletion
+
+        if (deleteError) throw deleteError;
+        if (!deletedData || deletedData.length === 0) throw new Error('Delete failed: Permission denied or post not found. check RLS policies. / 削除失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
+
+        // Success state
+        setUrl('');
+        setPreview(null);
+        setEditablePrompt('');
+        setIsEditing(false);
+        onPostCreated(); // Refresh feed
+        alert('Post deleted successfully! / 投稿を削除しました');
+    } catch (err: any) {
+        setError(err.message || 'Error deleting post');
+    } finally {
+        setLoading(false);
+    }
+};
+
+const handleShare = async () => {
+    if (!preview) return;
+
+    setLoading(true);
+    try {
+        const { error: insertError } = await supabase
+            .from('posts')
+            .insert([
+                {
+                    url: preview.url,
                     prompt: editablePrompt,
                     user_id: editableUserId.trim() || null,
-                })
-                .eq('url', preview.url)
-                .select('id', { count: 'exact' }); // Request count
+                    video_url: preview.videoUrl,
+                    image_url: preview.imageUrl,
+                    site_name: preview.siteName,
+                    title: preview.title,
+                    width: 0,
+                    height: 0
+                }
+            ]);
 
-            if (updateError) throw updateError;
-            if (count === 0) throw new Error('Update failed: Permission denied or post not found. check RLS policies. / 更新失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
-
-            if (editableUserId.trim()) {
-                localStorage.setItem('grok_share_userid', editableUserId.trim());
-            }
-
-            // Success state
-            setUrl('');
-            setPreview(null);
-            setEditablePrompt('');
-            setIsEditing(false);
-            onPostCreated(); // Refresh feed
-            alert('Post updated successfully! / 投稿を更新しました');
-        } catch (err: any) {
-            setError(err.message || 'Error updating post');
-        } finally {
-            setLoading(false);
+        if (insertError) {
+            if (insertError.code === '23505') throw new Error('URL already shared!');
+            throw insertError;
         }
-    };
 
-    const handleDelete = async () => {
-        if (!preview) return;
-        if (!confirm('Are you sure you want to delete this post? / 本当にこの投稿を削除しますか？')) return;
-
-        setLoading(true);
-        try {
-            const { error: deleteError, count } = await supabase
-                .from('posts')
-                .delete({ count: 'exact' }) // Request count
-                .eq('url', preview.url);
-
-            if (deleteError) throw deleteError;
-            if (count === 0) throw new Error('Delete failed: Permission denied or post not found. check RLS policies. / 削除失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
-
-            // Success state
-            setUrl('');
-            setPreview(null);
-            setEditablePrompt('');
-            setIsEditing(false);
-            onPostCreated(); // Refresh feed
-            alert('Post deleted successfully! / 投稿を削除しました');
-        } catch (err: any) {
-            setError(err.message || 'Error deleting post');
-        } finally {
-            setLoading(false);
+        if (editableUserId.trim()) {
+            localStorage.setItem('grok_share_userid', editableUserId.trim());
         }
-    };
 
-    const handleShare = async () => {
-        if (!preview) return;
+        setUrl('');
+        setPreview(null);
+        setEditablePrompt('');
+        onPostCreated();
+    } catch (err: any) {
+        setError(err.message || 'Error sharing post');
+    } finally {
+        setLoading(false);
+    }
+};
 
-        setLoading(true);
-        try {
-            const { error: insertError } = await supabase
-                .from('posts')
-                .insert([
-                    {
-                        url: preview.url,
-                        prompt: editablePrompt,
-                        user_id: editableUserId.trim() || null,
-                        video_url: preview.videoUrl,
-                        image_url: preview.imageUrl,
-                        site_name: preview.siteName,
-                        title: preview.title,
-                        width: 0,
-                        height: 0
-                    }
-                ]);
+return (
+    <div className="w-full max-w-2xl mx-auto mb-8 space-y-4">
+        {/* 1. URL Input Section */}
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
+            <form onSubmit={handleAnalyze} className="flex gap-2">
+                <input
+                    type="url"
+                    placeholder="Paste Grok URL (GrokのURLを貼り付け) ..."
+                    className="w-full flex-1 bg-gray-800 border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    required
+                />
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 whitespace-nowrap shadow-md shadow-purple-900/20"
+                >
+                    {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={18} fill="currentColor" />}
+                    Load / 読み込み
+                </button>
+            </form>
+            {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
+        </div>
 
-            if (insertError) {
-                if (insertError.code === '23505') throw new Error('URL already shared!');
-                throw insertError;
-            }
+        {/* 2. Manual Entry & Preview Section */}
+        {preview && (
+            <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex flex-col md:flex-row gap-6">
 
-            if (editableUserId.trim()) {
-                localStorage.setItem('grok_share_userid', editableUserId.trim());
-            }
-
-            setUrl('');
-            setPreview(null);
-            setEditablePrompt('');
-            onPostCreated();
-        } catch (err: any) {
-            setError(err.message || 'Error sharing post');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="w-full max-w-2xl mx-auto mb-8 space-y-4">
-            {/* 1. URL Input Section */}
-            <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
-                <form onSubmit={handleAnalyze} className="flex gap-2">
-                    <input
-                        type="url"
-                        placeholder="Paste Grok URL (GrokのURLを貼り付け) ..."
-                        className="w-full flex-1 bg-gray-800 border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        required
-                    />
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 whitespace-nowrap shadow-md shadow-purple-900/20"
-                    >
-                        {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={18} fill="currentColor" />}
-                        Load / 読み込み
-                    </button>
-                </form>
-                {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
-            </div>
-
-            {/* 2. Manual Entry & Preview Section */}
-            {preview && (
-                <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
-                    <div className="flex flex-col md:flex-row gap-6">
-
-                        {/* Left: Input Fields */}
-                        <div className="flex-1 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">User ID / ユーザーID</label>
-                                <input
-                                    type="text"
-                                    value={editableUserId}
-                                    onChange={(e) => setEditableUserId(e.target.value)}
-                                    placeholder="e.g. your_x_handle"
-                                    className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description (プロンプト・説明)</label>
-                                <textarea
-                                    value={editablePrompt}
-                                    onChange={(e) => setEditablePrompt(e.target.value)}
-                                    placeholder="Describe the video content or paste the prompt... (Optional) / プロンプトや説明を入力..."
-                                    className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-2">
-                                {isEditing && (
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        disabled={loading}
-                                        className="px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-sm flex items-center gap-1 mr-auto"
-                                    >
-                                        <Trash2 size={16} />
-                                        Delete / 削除
-                                    </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => setPreview(null)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
-                                >
-                                    Cancel / キャンセル
-                                </button>
-                                <button
-                                    onClick={isEditing ? handleUpdate : handleShare}
-                                    disabled={loading}
-                                    className={`
-                                        px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all
-                                        ${isEditing
-                                            ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20 text-white'
-                                            : 'bg-green-600 hover:bg-green-500 shadow-green-900/20 text-white'
-                                        }
-                                        ${loading ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}
-                                    `}
-                                >
-                                    {loading ? <Loader2 className="animate-spin" /> : isEditing ? <RefreshCw size={18} /> : <Plus size={18} />}
-                                    {isEditing ? 'Update / 更新する' : 'Share / 投稿する'}
-                                </button>
-                            </div>
+                    {/* Left: Input Fields */}
+                    <div className="flex-1 space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">User ID / ユーザーID</label>
+                            <input
+                                type="text"
+                                value={editableUserId}
+                                onChange={(e) => setEditableUserId(e.target.value)}
+                                placeholder="e.g. your_x_handle"
+                                className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
                         </div>
 
-                        {/* Right: Visual Preview */}
-                        <div className="w-full max-w-[200px] mx-auto md:max-w-none md:w-48 shrink-0 flex flex-col gap-2">
-                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</label>
-                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black border border-gray-700 shadow-md flex items-center justify-center">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description (プロンプト・説明)</label>
+                            <textarea
+                                value={editablePrompt}
+                                onChange={(e) => setEditablePrompt(e.target.value)}
+                                placeholder="Describe the video content or paste the prompt... (Optional) / プロンプトや説明を入力..."
+                                className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
+                                autoFocus
+                            />
+                        </div>
 
-                                {/* Thumbnail Image Only (User requested to prioritize image) */}
-                                {preview.imageUrl && !previewImageError ? (
-                                    <div className="relative w-full h-full group cursor-pointer" onClick={() => window.open(preview.url, '_blank')}>
-                                        <img
-                                            src={preview.imageUrl}
-                                            alt="Thumbnail"
-                                            referrerPolicy="no-referrer"
-                                            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-                                            onError={() => {
-                                                console.error("Image load failed");
-                                                setPreviewImageError(true);
-                                            }}
-                                            onLoad={() => setLoading(false)}
-                                        />
+                        <div className="flex justify-end gap-3 pt-2">
+                            {isEditing && (
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={loading}
+                                    className="px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-sm flex items-center gap-1 mr-auto"
+                                >
+                                    <Trash2 size={16} />
+                                    Delete / 削除
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setPreview(null)}
+                                className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+                            >
+                                Cancel / キャンセル
+                            </button>
+                            <button
+                                onClick={isEditing ? handleUpdate : handleShare}
+                                disabled={loading}
+                                className={`
+                                        px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all
+                                        ${isEditing
+                                        ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20 text-white'
+                                        : 'bg-green-600 hover:bg-green-500 shadow-green-900/20 text-white'
+                                    }
+                                        ${loading ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}
+                                    `}
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : isEditing ? <RefreshCw size={18} /> : <Plus size={18} />}
+                                {isEditing ? 'Update / 更新する' : 'Share / 投稿する'}
+                            </button>
+                        </div>
+                    </div>
 
-                                        {/* Overlay to indicate it's a link */}
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                                            <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm">
-                                                <Sparkles size={16} className="text-white" />
-                                            </div>
+                    {/* Right: Visual Preview */}
+                    <div className="w-full max-w-[200px] mx-auto md:max-w-none md:w-48 shrink-0 flex flex-col gap-2">
+                        <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</label>
+                        <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black border border-gray-700 shadow-md flex items-center justify-center">
+
+                            {/* Thumbnail Image Only (User requested to prioritize image) */}
+                            {preview.imageUrl && !previewImageError ? (
+                                <div className="relative w-full h-full group cursor-pointer" onClick={() => window.open(preview.url, '_blank')}>
+                                    <img
+                                        src={preview.imageUrl}
+                                        alt="Thumbnail"
+                                        referrerPolicy="no-referrer"
+                                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+                                        onError={() => {
+                                            console.error("Image load failed");
+                                            setPreviewImageError(true);
+                                        }}
+                                        onLoad={() => setLoading(false)}
+                                    />
+
+                                    {/* Overlay to indicate it's a link */}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                                        <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                                            <Sparkles size={16} className="text-white" />
                                         </div>
                                     </div>
-                                ) : previewImageError ? (
-                                    <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-yellow-400 gap-2">
-                                        <div className="bg-yellow-900/20 p-2 rounded-full mb-1">
-                                            <span className="text-xl">⚠️</span>
-                                        </div>
-                                        <p className="text-xs font-bold">Preview Unavailable / プレビュー不可</p>
-                                        <p className="text-[10px] leading-tight text-gray-400">
-                                            Could not load thumbnail, but you can still post.
-                                            <br />
-                                            画像が読み込めませんが、投稿は可能です。
-                                        </p>
-                                        <button
-                                            className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
-                                            onClick={() => window.open(preview.url, '_blank')}
-                                        >
-                                            Check Original / 元ページ確認
-                                        </button>
+                                </div>
+                            ) : previewImageError ? (
+                                <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-yellow-400 gap-2">
+                                    <div className="bg-yellow-900/20 p-2 rounded-full mb-1">
+                                        <span className="text-xl">⚠️</span>
                                     </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
-                                        <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-xs text-center">Loading / 読み込み中...</span>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
-                            </div>
+                                    <p className="text-xs font-bold">Preview Unavailable / プレビュー不可</p>
+                                    <p className="text-[10px] leading-tight text-gray-400">
+                                        Could not load thumbnail, but you can still post.
+                                        <br />
+                                        画像が読み込めませんが、投稿は可能です。
+                                    </p>
+                                    <button
+                                        className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
+                                        onClick={() => window.open(preview.url, '_blank')}
+                                    >
+                                        Check Original / 元ページ確認
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
+                                    <Loader2 className="animate-spin" size={20} />
+                                    <span className="text-xs text-center">Loading / 読み込み中...</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-center">
+                            <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
-    );
+            </div>
+        )}
+    </div>
+);
 }
 
 // Add successLoad helper or just simplify state?
