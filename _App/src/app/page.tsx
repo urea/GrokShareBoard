@@ -59,13 +59,13 @@ export default function Home() {
         <div className="mb-6">
           <details className="group bg-[#2a2a2a] rounded-md overflow-hidden border border-gray-700">
             <summary className="cursor-pointer p-3 text-sm font-bold text-gray-300 hover:text-white flex items-center justify-between transition-colors bg-[#252525]">
-              <span>📬 Post GrokImagine / Utilization Guide</span>
+              <span>📬 Post / Guide (投稿・使い方)</span>
               <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
             </summary>
             <div className="p-4 bg-[#202020]">
               <div className="text-xs text-gray-400 mb-4 space-y-1">
-                <p>1. Grokで動画URLをコピー</p>
-                <p>2. 下記にURLを貼り付け、「Post GrokImagine」を押す</p>
+                <p>1. Grokで動画URLをコピー (Copy Grok Video URL)</p>
+                <p>2. 下記にURLを貼り付け、「Load / 読み込み」を押す (Paste URL & click Load)</p>
               </div>
               <ShareInput onPostCreated={fetchPosts} />
             </div>
@@ -77,7 +77,7 @@ export default function Home() {
           <div className="relative w-full max-w-xs">
             <input
               type="text"
-              placeholder="Search query..."
+              placeholder="Search / 検索 (User ID, Prompt)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#2a2a2a] border border-gray-600 text-sm text-white pl-8 pr-3 py-1.5 rounded focus:ring-1 focus:ring-[#0099cc] outline-none placeholder-gray-500"
