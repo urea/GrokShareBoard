@@ -119,15 +119,17 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         if (!preview) return;
         setLoading(true);
         try {
-            const { error: updateError } = await supabase
+            const { error: updateError, count } = await supabase
                 .from('posts')
                 .update({
                     prompt: editablePrompt,
                     user_id: editableUserId.trim() || null,
                 })
-                .eq('url', preview.url);
+                .eq('url', preview.url)
+                .select('id', { count: 'exact' }); // Request count
 
             if (updateError) throw updateError;
+            if (count === 0) throw new Error('Update failed: Permission denied or post not found. check RLS policies. / 更新失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
 
             if (editableUserId.trim()) {
                 localStorage.setItem('grok_share_userid', editableUserId.trim());
@@ -153,12 +155,13 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
         setLoading(true);
         try {
-            const { error: deleteError } = await supabase
+            const { error: deleteError, count } = await supabase
                 .from('posts')
-                .delete()
+                .delete({ count: 'exact' }) // Request count
                 .eq('url', preview.url);
 
             if (deleteError) throw deleteError;
+            if (count === 0) throw new Error('Delete failed: Permission denied or post not found. check RLS policies. / 削除失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
 
             // Success state
             setUrl('');

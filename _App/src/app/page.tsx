@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.0';
+  const APP_VERSION = 'v1.1.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -135,6 +135,17 @@ export default function Home() {
                     We have adopted a zero-tolerance policy for illegal postings. Users are solely responsible for their posts. We reserve the right to remove any content that violates these rules or applicable laws without notice.
                     <br />
                     違法な投稿に対してはゼロトレランス方式を採用しています。投稿内容はユーザー自身の責任となります。規約や法律に違反するコンテンツは予告なく削除される場合があります。
+                  </p>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-900/50 p-3 rounded text-blue-200 mt-2">
+                  <p className="font-bold text-blue-400 mb-1">How to Edit or Delete / 編集・削除について</p>
+                  <p className="text-xs text-gray-300">
+                    To edit or delete a post, simply enter the same Grok URL again in the form above and click "Load".
+                    You will enter "Edit Mode" where you can update the prompt/ID or delete the post completely.
+                    <br />
+                    投稿を編集・削除したい場合は、再度そのGrok URLをフォームに入力して「読み込み」を押してください。
+                    編集モードになり、内容の更新や削除が行えます。
                   </p>
                 </div>
               </section>
