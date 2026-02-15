@@ -25,9 +25,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
 
-    // Video Retry State - Removed as we don't show video
-    const [previewImageError, setPreviewImageError] = useState(false);
-    const [error, setError] = useState('');
+
 
     // Load saved User ID on mount
     useEffect(() => {

@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.0.1';
+  const APP_VERSION = 'v1.0.2';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
