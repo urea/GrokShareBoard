@@ -119,8 +119,8 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">📬</span>
                 <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-                  <span>Click to Post & Guide</span>
-                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 投稿はこちら・使い方・規約</span>
+                  <span>Repository of Ideas & Archives</span>
+                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 自薦他薦・ジャンル不問のプロンプト保管庫</span>
                 </div>
               </div>
               <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
@@ -129,13 +129,16 @@ export default function Home() {
               {/* Post Instructions & Form */}
               <section>
                 <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
-                  <h3 className="text-sm font-bold text-white">Share Grok Imagine / 投稿する</h3>
+                  <h3 className="text-sm font-bold text-white">Share Grok Imagine / 投稿・ストックする</h3>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">
-                  After agreeing to the usage rules below, please submit the URL of your Grok generation.
-                  <br />
-                  以下の利用規約に同意した上で、GrokのURL（https://grok.com/imagine/...）を送信してください。
-                </p>
+                <div className="text-xs text-gray-400 mb-4 space-y-2">
+                  <p className="font-bold text-gray-300">プロンプトのアイディア保管庫 兼 おかず倉庫</p>
+                  <p>
+                    自分が作った作品はもちろん、SNSで見かけた「これ良い！」という他人の作品も、URLを貼るだけで気軽にストック・共有できます。
+                    <br />
+                    <span className="opacity-70 text-[10px]">You can archive any Grok URL, whether it's your own work or something great you found on X.</span>
+                  </p>
+                </div>
                 <ShareInput onPostCreated={() => {
                   setPage(0);
                   setHasMore(true);
@@ -145,26 +148,26 @@ export default function Home() {
 
               {/* Usage Rules */}
               <section className="text-xs space-y-2 border-t border-gray-700 pt-4">
-                <h3 className="text-sm font-bold text-gray-300 mb-2">Usage rules / 利用規約</h3>
-                <p>
-                  You can use this page to post your creations. It is free to post and no login is required.
-                  <br />
-                  このページではGrokの生成物を共有できます。投稿は無料、ログイン不要です。
-                </p>
+                <h3 className="text-sm font-bold text-gray-300 mb-3 underline decoration-[#0099cc] underline-offset-4">Open Archiving Policy / 利用規約・方針</h3>
 
-                <div className="bg-red-900/10 border border-red-900/30 p-3 rounded text-red-300/80">
-                  <p className="font-bold text-red-400/80 mb-1">
-                    Please do not post anything illegal.
-                    <br />
-                    違法なもの、公序良俗に反する内容は絶対に投稿しないでください。
-                  </p>
-                </div>
+                <ul className="list-disc list-inside space-y-2 mb-4 text-gray-400">
+                  <li>
+                    <span className="text-gray-200 font-bold">自薦・他薦不問</span>:
+                    自分の作品だけでなく、SNS等で見かけたお気に入り作品のURLも歓迎します。
+                  </li>
+                  <li>
+                    <span className="text-gray-200 font-bold">ジャンル制限なし</span>:
+                    プロンプト研究から「おかず作品」の収集まで。全年齢〜NSFWまであらゆる表現を許容します。
+                  </li>
+                  <li>
+                    <span className="text-red-400 font-bold">禁止事項</span>:
+                    児童ポルノ、犯罪、明白な権利侵害など、法律に抵触する内容は絶対に投稿しないでください。
+                  </li>
+                </ul>
 
-                <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-blue-300/80 mt-2">
+                <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-blue-300/80 mt-4">
                   <p className="font-bold text-blue-400/80 mb-1">How to Edit or Delete / 編集・削除について</p>
                   <p className="text-xs">
-                    To edit or delete a post, simply enter the same Grok URL again in the form above and click "Load".
-                    <br />
                     編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
                   </p>
                 </div>
@@ -179,7 +182,7 @@ export default function Home() {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search / 検索 (Prompt)..."
+                placeholder="Search prompt, ideas, archives... / 検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-[#2a2a2a] border border-gray-600 text-sm text-white pl-8 pr-3 py-1.5 rounded focus:ring-1 focus:ring-[#0099cc] outline-none placeholder-gray-500"
