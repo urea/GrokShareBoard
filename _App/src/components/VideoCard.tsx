@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Play, Copy } from 'lucide-react';
+import { Play, Copy, MousePointer2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
 
@@ -18,18 +18,13 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     const getValidImageUrl = (url: string | null) => {
         if (!url) return '/placeholder.png';
 
-        // If it's a Grok video/image URL
         if (url.includes('imagine-public.x.ai')) {
-            // If it already ends with _thumbnail.jpg or .png or .jpg, return as is
             if (url.endsWith('_thumbnail.jpg') || url.endsWith('.png') || url.endsWith('.jpg')) return url;
-
-            // Default fallback for raw UUIDs or old data: try thumbnail
             return url.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
         }
         return url;
     };
 
-    // Use the patched URL
     const displayImageUrl = getValidImageUrl(post.image_url);
     const [imageError, setImageError] = useState(false);
     const [videoError, setVideoError] = useState(false);
@@ -37,10 +32,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     const [showFullPrompt, setShowFullPrompt] = useState(false);
 
     const handleLinkClick = async () => {
-        // 1. Open URL in a new tab immediately for best UX
         window.open(post.url, '_blank');
-
-        // 2. Increment click count in background
         try {
             await supabase.rpc('increment_click', { post_id: post.id });
         } catch (err) {
@@ -122,21 +114,26 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                 {overlayStyle && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10 transition-opacity group-hover:opacity-100">
                         <div className="flex flex-col gap-1 pointer-events-auto">
-                            {/* Prompt/Comment */}
                             {post.prompt && (
                                 <div>
                                     <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md mb-1">
                                         {post.prompt}
                                     </p>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowFullPrompt(true);
-                                        }}
-                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
-                                    >
-                                        More / 全文
-                                    </button>
+                                    <div className="flex items-center justify-between">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowFullPrompt(true);
+                                            }}
+                                            className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
+                                        >
+                                            More / 全文
+                                        </button>
+                                        <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
+                                            <MousePointer2 size={10} />
+                                            <span>{post.clicks || 0}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -202,10 +199,16 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                         </p>
                     )}
                     <div className={`text-gray-500 flex justify-between items-center ${compact ? 'text-[10px]' : 'text-xs'}`}>
-                        <span className="flex gap-2 items-center">
-                            {!compact && new Date(post.created_at).toLocaleDateString()}
-                        </span>
-                        {!compact && <span>{post.site_name || 'Grok'}</span>}
+                        <div className="flex items-center gap-2">
+                            <span className="flex gap-2 items-center">
+                                {!compact && new Date(post.created_at).toLocaleDateString()}
+                            </span>
+                            {!compact && <span>{post.site_name || 'Grok'}</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50">
+                            <MousePointer2 size={compact ? 10 : 12} className="text-gray-400" />
+                            <span className="font-medium text-gray-300">{post.clicks || 0}</span>
+                        </div>
                     </div>
                 </div>
             )}
