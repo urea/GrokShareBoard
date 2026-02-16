@@ -340,25 +340,27 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                                             onError={() => {
                                                 console.log("Image load failed:", preview.imageUrl);
-                                                // Fallback logic: 
-                                                // 1. Try .png if _thumbnail.jpg fails
-                                                // 2. Try static .jpg if .png fails
+                                                // Strip query params for logic checks (handling ?t= timestamp)
+                                                const cleanUrl = preview.imageUrl.split('?')[0];
 
-                                                if (preview.imageUrl.includes('_thumbnail.jpg')) {
+                                                // Fallback logic: Try .png if _thumbnail.jpg fails
+                                                if (cleanUrl.includes('_thumbnail.jpg')) {
                                                     console.log("Retrying with .png...");
                                                     setPreview(prev => prev ? ({
                                                         ...prev,
                                                         imageUrl: prev.imageUrl.replace('_thumbnail.jpg', '.png')
                                                     }) : null);
-                                                } else if (preview.imageUrl.endsWith('.png')) {
+                                                } else if (cleanUrl.endsWith('.png')) {
                                                     console.log("Retrying with static .jpg...");
                                                     // Pattern change: /share-videos/UUID.png -> /images/UUID.jpg
-                                                    if (preview.imageUrl.includes('/share-videos/')) {
+                                                    if (cleanUrl.includes('/share-videos/')) {
                                                         setPreview((prev) => prev ? ({
                                                             ...prev,
                                                             imageUrl: prev.imageUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg')
                                                         }) : null);
                                                     } else {
+                                                        // If already .jpg or other format, mark as failed
+                                                        console.error("All image candidates failed.");
                                                         setPreviewImageError(true);
                                                     }
                                                 } else {
@@ -399,14 +401,24 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 onClick={() => {
                                                     // Retry logic:
                                                     // 1. Force image reload by appending/updating timestamp
-                                                    // 2. Reset error state
+                                                    // 2. Reset back to CANONICAL thumbnail (not the failed .jpg)
+                                                    // 3. Reset error state
                                                     setPreview(prev => {
                                                         if (!prev) return null;
-                                                        // Remove existing timestamp if any
-                                                        const cleanUrl = prev.imageUrl.split('?')[0];
+
+                                                        let newImageUrl = prev.imageUrl;
+                                                        // Try to reconstruct canonical thumbnail from post URL UUID
+                                                        const uuidMatch = prev.url.match(/post\/([a-f0-9-]{36})/);
+                                                        if (uuidMatch) {
+                                                            newImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                                                        } else {
+                                                            // Fallback: just strip query params from current
+                                                            newImageUrl = prev.imageUrl.split('?')[0];
+                                                        }
+
                                                         return {
                                                             ...prev,
-                                                            imageUrl: `${cleanUrl}?t=${Date.now()}`
+                                                            imageUrl: `${newImageUrl}?t=${Date.now()}`
                                                         };
                                                     });
                                                     setPreviewImageError(false);
