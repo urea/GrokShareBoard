@@ -10,5 +10,6 @@ export interface Post {
     height: number | null;
     site_name: string | null;
     title: string | null;
+    clicks: number | null;
     created_at: string;
 }

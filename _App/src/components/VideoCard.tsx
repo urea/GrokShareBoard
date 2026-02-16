@@ -1,10 +1,11 @@
-
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
 import { Play, Copy } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { createPortal } from 'react-dom';
 
 interface VideoCardProps {
     post: Post;
@@ -19,7 +20,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
 
         // If it's a Grok video/image URL
         if (url.includes('imagine-public.x.ai')) {
-            // If it already ends with _thumbnail.jpg or .png or .jpg, return as is (Trust the DB if it was updated by ShareInput)
+            // If it already ends with _thumbnail.jpg or .png or .jpg, return as is
             if (url.endsWith('_thumbnail.jpg') || url.endsWith('.png') || url.endsWith('.jpg')) return url;
 
             // Default fallback for raw UUIDs or old data: try thumbnail
@@ -35,13 +36,25 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     const [isHovered, setIsHovered] = useState(false);
     const [showFullPrompt, setShowFullPrompt] = useState(false);
 
+    const handleLinkClick = async () => {
+        // 1. Open URL in a new tab immediately for best UX
+        window.open(post.url, '_blank');
+
+        // 2. Increment click count in background
+        try {
+            await supabase.rpc('increment_click', { post_id: post.id });
+        } catch (err) {
+            console.error('Failed to increment click:', err);
+        }
+    };
+
     return (
         <motion.div
             className="relative group rounded-xl overflow-hidden bg-gray-900 border border-gray-800 shadow-lg cursor-pointer"
             whileHover={{ scale: 1.02 }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={() => window.open(post.url, '_blank')}
+            onClick={handleLinkClick}
         >
             <div className="aspect-[2/3] relative w-full bg-black">
                 {/* Thumbnail Image */}
@@ -52,7 +65,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                         referrerPolicy="no-referrer"
                         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && post.video_url && !videoError ? 'opacity-0' : 'opacity-100'}`}
                         onError={(e) => {
-                            // ... existing onError logic ...
                             const target = e.currentTarget;
                             const currentSrc = target.src;
 
@@ -92,7 +104,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                         loop
                         playsInline
                         className="absolute inset-0 w-full h-full object-cover"
-                        onLoadedData={() => console.log("Video loaded")}
                         onError={() => {
                             console.log("Video preview failed");
                             setVideoError(true);
@@ -128,14 +139,12 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                     </button>
                                 </div>
                             )}
-
-                            {/* User ID Removed */}
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Full Prompt Overlay Modal - Using Portal to escape stacking context */}
+            {/* Full Prompt Overlay Modal */}
             {showFullPrompt && (
                 <ModalPortal>
                     <div
@@ -179,16 +188,12 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                             <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
                                 {post.prompt}
                             </p>
-                            {/* User ID Removed */}
                         </div>
                     </div>
                 </ModalPortal>
             )}
 
-            {/* Bottom Info Area - Only show if strict compact mode isn't forcing overlay-only, 
-                BUT user requested prompt display. If overlayStyle is used, prompt is now inside image.
-                If overlayStyle is FALSE, we keep the original bottom area. 
-            */}
+            {/* Bottom Info Area */}
             {!overlayStyle && (
                 <div className={`${compact ? 'p-2' : 'p-3'}`}>
                     {!compact && (
@@ -199,7 +204,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                     <div className={`text-gray-500 flex justify-between items-center ${compact ? 'text-[10px]' : 'text-xs'}`}>
                         <span className="flex gap-2 items-center">
                             {!compact && new Date(post.created_at).toLocaleDateString()}
-                            {/* User ID removed */}
                         </span>
                         {!compact && <span>{post.site_name || 'Grok'}</span>}
                     </div>
@@ -208,9 +212,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
         </motion.div>
     );
 }
-
-// Simple Portal Component
-import { createPortal } from 'react-dom';
 
 function ModalPortal({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false);
