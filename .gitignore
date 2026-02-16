@@ -30,6 +30,8 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 _Data/*.db
+_Data/*.db-shm
+_Data/*.db-wal
 _Data/*.sqlite
 _Data/*.sqlite3
 # Keep .keep or similar if empty folders need tracking, but usually not needed for _Data if app creates it.

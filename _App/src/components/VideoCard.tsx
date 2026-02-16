@@ -110,27 +110,29 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10 transition-opacity group-hover:opacity-100">
                         <div className="flex flex-col gap-1 pointer-events-auto">
                             {post.prompt && (
-                                <div>
-                                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md mb-1">
-                                        {post.prompt}
-                                    </p>
-                                    <div className="flex items-center justify-between">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShowFullPrompt(true);
-                                            }}
-                                            className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
-                                        >
-                                            More / 全文
-                                        </button>
-                                        <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
-                                            <MousePointer2 size={10} />
-                                            <span>{post.clicks || 0}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md mb-1">
+                                    {post.prompt}
+                                </p>
                             )}
+                            <div className="flex items-center justify-between">
+                                {post.prompt ? (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullPrompt(true);
+                                        }}
+                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
+                                    >
+                                        More / 全文
+                                    </button>
+                                ) : (
+                                    <div />
+                                )}
+                                <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
+                                    <MousePointer2 size={10} />
+                                    <span>{post.clicks || 0}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
