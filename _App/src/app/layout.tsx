@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Grok Share Board",
     description: "Share and discover Grok Imagine creations.",
-    // images: ["/og-image.png"], // TODO: Add an OG image later
+    images: ["https://urea.github.io/GrokShareBoard/og-image.png"],
   },
 };
 
