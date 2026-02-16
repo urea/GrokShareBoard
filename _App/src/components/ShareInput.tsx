@@ -380,73 +380,77 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </div>
                                     </div>
                                 ) : previewImageError ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
-                                        <AlertTriangle className="w-10 h-10 text-yellow-500 mb-2" />
-                                        <p className="text-yellow-500 font-bold mb-1">Preview Unavailable / プレビュー不可</p>
-                                        <p className="text-gray-400 text-xs mb-4">
-                                            Could not load thumbnail, but you can still post.<br />
-                                            画像が読み込めませんが、投稿は可能です。
-                                        </p>
-                                        <div className="flex gap-3">
-                                            <a
-                                                href={preview.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-400 hover:text-blue-300 text-xs underline"
-                                            >
-                                                Check Original / 元ページ確認
-                                            </a>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    // Retry logic:
-                                                    // 1. Force image reload by appending/updating timestamp
-                                                    // 2. Reset back to CANONICAL thumbnail (not the failed .jpg)
-                                                    // 3. Reset error state
-                                                    setPreview(prev => {
-                                                        if (!prev) return null;
-
-                                                        let newImageUrl = prev.imageUrl;
-                                                        // Try to reconstruct canonical thumbnail from post URL UUID
-                                                        const uuidMatch = prev.url.match(/post\/([a-f0-9-]{36})/);
-                                                        if (uuidMatch) {
-                                                            newImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
-                                                        } else {
-                                                            // Fallback: just strip query params from current
-                                                            newImageUrl = prev.imageUrl.split('?')[0];
-                                                        }
-
-                                                        return {
-                                                            ...prev,
-                                                            imageUrl: `${newImageUrl}?t=${Date.now()}`
-                                                        };
-                                                    });
-                                                    setPreviewImageError(false);
-                                                }}
-                                                className="text-green-400 hover:text-green-300 text-xs underline cursor-pointer"
-                                            >
-                                                Retry Image / 画像再読み込み
-                                            </button>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
+                                        <div className="flex flex-col gap-3 items-center max-w-[280px]">
+                                            <div className="text-gray-400 text-xs leading-relaxed">
+                                                <p className="mb-2 text-gray-300 font-medium">No Preview Yet / プレビュー未生成</p>
+                                                <p className="mb-1">画像を読み込めませんが投稿は可能です。</p>
+                                                <p className="text-[10px] text-gray-500">※Grok側でまだ画像が生成されていない可能性があります。以下の手順で確認できます。</p>
+                                            </div>
+                                            
+                                            <div className="w-full bg-gray-800/50 rounded p-2 flex flex-col gap-2">
+                                                <a
+                                                    href={preview.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center justify-center gap-2 text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 py-1.5 px-3 rounded text-xs transition-colors border border-blue-500/20"
+                                                >
+                                                    <span className="font-bold">1.</span> Check Original / 元ページを開く
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        // Retry logic:
+                                                        // 1. Force image reload by appending/updating timestamp
+                                                        // 2. Reset back to CANONICAL thumbnail (not the failed .jpg)
+                                                        // 3. Reset error state
+                                                        setPreview(prev => {
+                                                            if (!prev) return null;
+                                                            
+                                                            let newImageUrl = prev.imageUrl;
+                                                            // Try to reconstruct canonical thumbnail from post URL UUID
+                                                            const uuidMatch = prev.url.match(/post\/([a-f0-9-]{36})/);
+                                                            if (uuidMatch) {
+                                                                newImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                                                            } else {
+                                                                // Fallback: just strip query params from current
+                                                                newImageUrl = prev.imageUrl.split('?')[0];
+                                                            }
+    
+                                                            return {
+                                                                ...prev,
+                                                                imageUrl: `${newImageUrl}?t=${Date.now()}`
+                                                            };
+                                                        });
+                                                        setPreviewImageError(false);
+                                                    }}
+                                                    className="flex items-center justify-center gap-2 text-green-400 hover:text-white bg-green-500/10 hover:bg-green-500/20 py-1.5 px-3 rounded text-xs transition-colors border border-green-500/20 cursor-pointer"
+                                                >
+                                                    <span className="font-bold">2.</span> Retry Image / 画像再読み込み
+                                                </button>
+                                            </div>
                                         </div>
+                                    </div>
                                         <p className="text-gray-600 text-[10px] mt-2 max-w-[200px]">
                                             ※元のページを開くとサムネイルが生成される場合があります。
                                         </p>
                                     </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
-                                        <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-xs text-center">Loading / 読み込み中...</span>
-                                    </div>
+                            ) : (
+                            <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
+                                <Loader2 className="animate-spin" size={20} />
+                                <span className="text-xs text-center">Loading / 読み込み中...</span>
+                            </div>
                                 )}
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
-                            </div>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+                </div>
+    )
+}
+        </div >
     );
 }
 
