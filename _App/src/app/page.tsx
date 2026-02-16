@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.13';
+  const APP_VERSION = 'v1.1.14';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -110,7 +110,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto px-2 pt-4">
+      <main className="w-full max-w-[1920px] mx-auto px-2 pt-4">
 
         {/* Usages / Input Area (Collapsible or Compact) */}
         <div className="mb-6">
@@ -196,12 +196,11 @@ export default function Home() {
           </form>
         </div>
 
-        {/* Gallery Grid (Monsnode style: Tight masonry-like grid) */}
-        {/* Use minimal gap (gap-1 or gap-2) */}
-        <div className="columns-2 md:columns-4 lg:columns-5 xl:columns-6 gap-1 space-y-1 pb-10 mx-auto">
+        {/* Standard Grid Layout (Flows Left -> Right) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 pb-10 mx-auto">
           {posts.length > 0 ? (
             posts.map((post) => (
-              <div key={post.id} className="break-inside-avoid mb-1">
+              <div key={post.id} className="w-full">
                 {/* Force compact mode and pass style prop for overlay look */}
                 <VideoCard post={post} compact={true} overlayStyle={true} />
               </div>
