@@ -31,12 +31,16 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
     // Use the patched URL
     const displayImageUrl = getValidImageUrl(post.image_url);
     const [imageError, setImageError] = useState(false);
+    const [videoError, setVideoError] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const [showFullPrompt, setShowFullPrompt] = useState(false);
 
     return (
         <motion.div
             className="relative group rounded-xl overflow-hidden bg-gray-900 border border-gray-800 shadow-lg cursor-pointer"
             whileHover={{ scale: 1.02 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             onClick={() => window.open(post.url, '_blank')}
         >
             <div className="aspect-[2/3] relative w-full bg-black">
@@ -46,30 +50,21 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                         src={displayImageUrl}
                         alt={post.prompt || 'Grok generation'}
                         referrerPolicy="no-referrer"
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && post.video_url && !videoError ? 'opacity-0' : 'opacity-100'}`}
                         onError={(e) => {
-                            // Multi-stage fallback:
-                            // 1. _thumbnail.jpg (Default) -> Fails
-                            // 2. Try .png (High res video frame)
-                            // 3. Try .jpg (Static image post path: .../images/[UUID].jpg)
-                            // 4. Try circular fallback (JPG -> Thumbnail) if broken link
-
+                            // ... existing onError logic ...
                             const target = e.currentTarget;
                             const currentSrc = target.src;
 
                             if (currentSrc.includes('_thumbnail.jpg')) {
-                                // Try .png next
                                 target.src = currentSrc.replace('_thumbnail.jpg', '.png');
                             } else if (currentSrc.endsWith('.png')) {
-                                // Try static image path .jpg
-                                // Note: Path changes from /share-videos/ to /images/
                                 if (currentSrc.includes('/share-videos/')) {
                                     target.src = currentSrc.replace('/share-videos/', '/images/').replace('.png', '.jpg');
                                 } else {
                                     setImageError(true);
                                 }
                             } else if (currentSrc.includes('/images/') && currentSrc.endsWith('.jpg')) {
-                                // Circular fallback: If static .jpg fails, try reverting to _thumbnail.jpg
                                 const canonicalThumbnail = currentSrc.replace('/images/', '/share-videos/').replace('.jpg', '_thumbnail.jpg');
                                 if (canonicalThumbnail !== currentSrc) {
                                     target.src = canonicalThumbnail;
@@ -77,21 +72,44 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                     setImageError(true);
                                 }
                             } else {
-                                // Give up
                                 setImageError(true);
                             }
                         }}
                         loading="lazy"
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center">
-                        Image Unavailable
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center text-balance">
+                        Preview Unavailable
+                    </div>
+                )}
+
+                {/* Video Preview on Hover */}
+                {isHovered && post.video_url && !videoError && (
+                    <video
+                        src={post.video_url}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onLoadedData={() => console.log("Video loaded")}
+                        onError={() => {
+                            console.log("Video preview failed");
+                            setVideoError(true);
+                        }}
+                    />
+                )}
+
+                {/* Video Badge */}
+                {post.video_url && (
+                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm p-1.5 rounded-full text-white shadow-xl z-20 border border-white/10 group-hover:scale-110 transition-transform">
+                        <Play size={14} fill="currentColor" />
                     </div>
                 )}
 
                 {/* Overlays (Monsnode Style) */}
                 {overlayStyle && (
-                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10 transition-opacity group-hover:opacity-100">
                         <div className="flex flex-col gap-1 pointer-events-auto">
                             {/* Prompt/Comment */}
                             {post.prompt && (
