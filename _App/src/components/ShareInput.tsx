@@ -379,22 +379,47 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </div>
                                     </div>
                                 ) : previewImageError ? (
-                                    <div className="flex flex-col items-center justify-center text-center p-4 h-full bg-gray-900 text-yellow-400 gap-2">
-                                        <div className="bg-yellow-900/20 p-2 rounded-full mb-1">
-                                            <span className="text-xl">⚠️</span>
-                                        </div>
-                                        <p className="text-xs font-bold">Preview Unavailable / プレビュー不可</p>
-                                        <p className="text-[10px] leading-tight text-gray-400">
-                                            Could not load thumbnail, but you can still post.
-                                            <br />
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
+                                        <AlertTriangle className="w-10 h-10 text-yellow-500 mb-2" />
+                                        <p className="text-yellow-500 font-bold mb-1">Preview Unavailable / プレビュー不可</p>
+                                        <p className="text-gray-400 text-xs mb-4">
+                                            Could not load thumbnail, but you can still post.<br />
                                             画像が読み込めませんが、投稿は可能です。
                                         </p>
-                                        <button
-                                            className="text-[10px] text-blue-400 underline mt-2 hover:text-blue-300"
-                                            onClick={() => window.open(preview.url, '_blank')}
-                                        >
-                                            Check Original / 元ページ確認
-                                        </button>
+                                        <div className="flex gap-3">
+                                            <a
+                                                href={preview.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-400 hover:text-blue-300 text-xs underline"
+                                            >
+                                                Check Original / 元ページ確認
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    // Retry logic:
+                                                    // 1. Force image reload by appending/updating timestamp
+                                                    // 2. Reset error state
+                                                    setPreview(prev => {
+                                                        if (!prev) return null;
+                                                        // Remove existing timestamp if any
+                                                        const cleanUrl = prev.imageUrl.split('?')[0];
+                                                        return {
+                                                            ...prev,
+                                                            imageUrl: `${cleanUrl}?t=${Date.now()}`
+                                                        };
+                                                    });
+                                                    setPreviewImageError(false);
+                                                }}
+                                                className="text-green-400 hover:text-green-300 text-xs underline cursor-pointer"
+                                            >
+                                                Retry Image / 画像再読み込み
+                                            </button>
+                                        </div>
+                                        <p className="text-gray-600 text-[10px] mt-2 max-w-[200px]">
+                                            ※元のページを開くとサムネイルが生成される場合があります。
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
