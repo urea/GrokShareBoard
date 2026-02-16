@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.17';
+  const APP_VERSION = 'v1.1.18';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -112,37 +112,39 @@ export default function Home() {
 
       <main className="w-full max-w-[1920px] mx-auto px-2 pt-4">
 
-        {/* Always Visible Posting Section */}
-        <section className="mb-6 bg-[#2a2a2a] p-4 rounded-md border border-gray-700 shadow-md">
-          <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
-            <span className="text-xl">📬</span>
-            <h2 className="text-sm font-bold text-white">Share Grok Imagine / 投稿する</h2>
-          </div>
-          <p className="text-xs text-gray-400 mb-4">
-            After agreeing to the usage rules below, please submit the URL of your Grok generation.
-            <br />
-            以下の利用規約に同意した上で、GrokのURL（https://grok.com/imagine/...）を送信してください。
-          </p>
-          <ShareInput onPostCreated={() => {
-            setPage(0);
-            setHasMore(true);
-            fetchPosts(0, true);
-          }} />
-        </section>
-
-        {/* Collapsible Info / Help Section */}
-        <div className="mb-8">
-          <details className="group bg-[#2a2a2a]/50 rounded-md overflow-hidden border border-gray-700/50">
-            <summary className="cursor-pointer p-3 text-xs font-bold text-gray-400 hover:text-white flex items-center justify-between transition-colors bg-[#252525]/50">
+        {/* Collapsible Post/Guide Area (Compact) */}
+        <div className="mb-6">
+          <details className="group bg-[#2a2a2a] rounded-md overflow-hidden border border-gray-700 shadow-lg">
+            <summary className="cursor-pointer p-3 text-sm font-bold text-gray-200 hover:text-white flex items-center justify-between transition-all bg-[#252525] hover:bg-[#2d2d2d]">
               <div className="flex items-center gap-2">
-                <Search size={14} className="text-gray-500" />
-                <span>Guide & Rules / 使い方・規約</span>
+                <span className="text-lg">📬</span>
+                <div className="flex flex-col md:flex-row md:items-center md:gap-2">
+                  <span>Click to Post & Guide</span>
+                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 投稿はこちら・使い方・規約</span>
+                </div>
               </div>
-              <span className="group-open:rotate-180 transition-transform text-gray-600 text-[10px]">▼</span>
+              <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
             </summary>
-            <div className="p-4 bg-[#202020]/50 text-gray-400 space-y-6">
+            <div className="p-4 bg-[#202020] text-gray-300 space-y-6">
+              {/* Post Instructions & Form */}
+              <section>
+                <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
+                  <h3 className="text-sm font-bold text-white">Share Grok Imagine / 投稿する</h3>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">
+                  After agreeing to the usage rules below, please submit the URL of your Grok generation.
+                  <br />
+                  以下の利用規約に同意した上で、GrokのURL（https://grok.com/imagine/...）を送信してください。
+                </p>
+                <ShareInput onPostCreated={() => {
+                  setPage(0);
+                  setHasMore(true);
+                  fetchPosts(0, true);
+                }} />
+              </section>
+
               {/* Usage Rules */}
-              <section className="text-xs space-y-2">
+              <section className="text-xs space-y-2 border-t border-gray-700 pt-4">
                 <h3 className="text-sm font-bold text-gray-300 mb-2">Usage rules / 利用規約</h3>
                 <p>
                   You can use this page to post your creations. It is free to post and no login is required.
@@ -160,7 +162,7 @@ export default function Home() {
 
                 <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-blue-300/80 mt-2">
                   <p className="font-bold text-blue-400/80 mb-1">How to Edit or Delete / 編集・削除について</p>
-                  <p className="text-[10px]">
+                  <p className="text-xs">
                     To edit or delete a post, simply enter the same Grok URL again in the form above and click "Load".
                     <br />
                     編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
