@@ -94,9 +94,27 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
             const imageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg`;
 
+            // Detect if video actually exists before setting it in preview
+            // (Uses a temporary video element to check availability)
+            let detectedVideoUrl = '';
+            try {
+                const checkVideo = () => new Promise<string>((resolve) => {
+                    const v = document.createElement('video');
+                    v.preload = 'metadata';
+                    v.src = videoUrl;
+                    v.onloadedmetadata = () => resolve(videoUrl);
+                    v.onerror = () => resolve('');
+                    // Timeout after 3 seconds to avoid hanging
+                    setTimeout(() => resolve(''), 3000);
+                });
+                detectedVideoUrl = await checkVideo();
+            } catch (e) {
+                console.warn("Video detection failed, defaulting to no video.");
+            }
+
             const mockPreview: PreviewData = {
                 url: url,
-                videoUrl: videoUrl,
+                videoUrl: detectedVideoUrl,
                 imageUrl: imageUrl,
                 siteName: 'Grok',
                 title: 'Grok Creation',

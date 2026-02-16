@@ -104,7 +104,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                 )}
 
                 {/* Video Badge */}
-                {post.video_url && (
+                {post.video_url && !videoError && (
                     <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm p-1.5 rounded-full text-white shadow-xl z-20 border border-white/10 group-hover:scale-110 transition-transform">
                         <Play size={14} fill="currentColor" />
                     </div>
