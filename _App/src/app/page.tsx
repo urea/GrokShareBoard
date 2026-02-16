@@ -15,7 +15,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.16';
+  const APP_VERSION = 'v1.1.17';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -112,61 +112,58 @@ export default function Home() {
 
       <main className="w-full max-w-[1920px] mx-auto px-2 pt-4">
 
-        {/* Usages / Input Area (Collapsible or Compact) */}
-        <div className="mb-6">
-          <details className="group bg-[#2a2a2a] rounded-md overflow-hidden border border-gray-700">
-            <summary className="cursor-pointer p-3 text-sm font-bold text-gray-300 hover:text-white flex items-center justify-between transition-colors bg-[#252525]">
-              <span>📬 Post / Guide (投稿・使い方・利用規約)</span>
-              <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
+        {/* Always Visible Posting Section */}
+        <section className="mb-6 bg-[#2a2a2a] p-4 rounded-md border border-gray-700 shadow-md">
+          <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
+            <span className="text-xl">📬</span>
+            <h2 className="text-sm font-bold text-white">Share Grok Imagine / 投稿する</h2>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            After agreeing to the usage rules below, please submit the URL of your Grok generation.
+            <br />
+            以下の利用規約に同意した上で、GrokのURL（https://grok.com/imagine/...）を送信してください。
+          </p>
+          <ShareInput onPostCreated={() => {
+            setPage(0);
+            setHasMore(true);
+            fetchPosts(0, true);
+          }} />
+        </section>
+
+        {/* Collapsible Info / Help Section */}
+        <div className="mb-8">
+          <details className="group bg-[#2a2a2a]/50 rounded-md overflow-hidden border border-gray-700/50">
+            <summary className="cursor-pointer p-3 text-xs font-bold text-gray-400 hover:text-white flex items-center justify-between transition-colors bg-[#252525]/50">
+              <div className="flex items-center gap-2">
+                <Search size={14} className="text-gray-500" />
+                <span>Guide & Rules / 使い方・規約</span>
+              </div>
+              <span className="group-open:rotate-180 transition-transform text-gray-600 text-[10px]">▼</span>
             </summary>
-            <div className="p-4 bg-[#202020] text-gray-300 space-y-6">
-
-              {/* Post Instructions */}
-              <section>
-                <h3 className="text-sm font-bold text-white mb-2 border-b border-gray-600 pb-1">Post a URL / 投稿</h3>
-                <p className="text-xs text-gray-400 mb-2">
-                  After agreeing to the usage rules below, please submit the URL of your tweet using this form.
-                  <br />
-                  以下の利用規約に同意した上で、フォームからGrokのURLを送信してください。
-                </p>
-                <ShareInput onPostCreated={() => {
-                  setPage(0);
-                  setHasMore(true);
-                  fetchPosts(0, true);
-                }} />
-              </section>
-
+            <div className="p-4 bg-[#202020]/50 text-gray-400 space-y-6">
               {/* Usage Rules */}
-              <section className="text-xs space-y-2 border-t border-gray-700 pt-4">
-                <h3 className="text-sm font-bold text-white mb-2">Usage rules / 利用規約</h3>
-
+              <section className="text-xs space-y-2">
+                <h3 className="text-sm font-bold text-gray-300 mb-2">Usage rules / 利用規約</h3>
                 <p>
-                  You can use this page to post your tweets. It is free to post and no login is required. Please use it to promote your tweets.
+                  You can use this page to post your creations. It is free to post and no login is required.
                   <br />
-                  このページではGrokの生成物を共有できます。投稿は無料で、ログインも不要です。作品の共有にご利用ください。
+                  このページではGrokの生成物を共有できます。投稿は無料、ログイン不要です。
                 </p>
 
-                <div className="bg-red-900/20 border border-red-900/50 p-3 rounded text-red-200">
-                  <p className="font-bold text-red-400 mb-1">
-                    Please do not post anything illegal, especially videos containing pornography of anyone under the age of 18.
+                <div className="bg-red-900/10 border border-red-900/30 p-3 rounded text-red-300/80">
+                  <p className="font-bold text-red-400/80 mb-1">
+                    Please do not post anything illegal.
                     <br />
-                    違法なもの、特に18歳未満のポルノを含む動画は絶対に投稿しないでください。
-                  </p>
-                  <p className="opacity-80 mt-2">
-                    We have adopted a zero-tolerance policy for illegal postings. Users are solely responsible for their posts. We reserve the right to remove any content that violates these rules or applicable laws without notice.
-                    <br />
-                    違法な投稿に対してはゼロトレランス方式を採用しています。投稿内容はユーザー自身の責任となります。規約や法律に違反するコンテンツは予告なく削除される場合があります。
+                    違法なもの、公序良俗に反する内容は絶対に投稿しないでください。
                   </p>
                 </div>
 
-                <div className="bg-blue-900/20 border border-blue-900/50 p-3 rounded text-blue-200 mt-2">
-                  <p className="font-bold text-blue-400 mb-1">How to Edit or Delete / 編集・削除について</p>
-                  <p className="text-xs text-gray-300">
+                <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-blue-300/80 mt-2">
+                  <p className="font-bold text-blue-400/80 mb-1">How to Edit or Delete / 編集・削除について</p>
+                  <p className="text-[10px]">
                     To edit or delete a post, simply enter the same Grok URL again in the form above and click "Load".
-                    You will enter "Edit Mode" where you can update the prompt/ID or delete the post completely.
                     <br />
-                    投稿を編集・削除したい場合は、再度そのGrok URLをフォームに入力して「読み込み」を押してください。
-                    編集モードになり、内容の更新や削除が行えます。
+                    編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
                   </p>
                 </div>
               </section>
