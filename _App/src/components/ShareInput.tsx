@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Plus, Sparkles, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { Search, Plus, X, Loader2, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Define local interface for Preview Data
