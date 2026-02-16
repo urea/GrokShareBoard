@@ -387,7 +387,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 <p className="mb-1">画像を読み込めませんが投稿は可能です。</p>
                                                 <p className="text-[10px] text-gray-500">※Grok側でまだ画像が生成されていない可能性があります。以下の手順で確認できます。</p>
                                             </div>
-                                            
+
                                             <div className="w-full bg-gray-800/50 rounded p-2 flex flex-col gap-2">
                                                 <a
                                                     href={preview.url}
@@ -406,7 +406,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                         // 3. Reset error state
                                                         setPreview(prev => {
                                                             if (!prev) return null;
-                                                            
+
                                                             let newImageUrl = prev.imageUrl;
                                                             // Try to reconstruct canonical thumbnail from post URL UUID
                                                             const uuidMatch = prev.url.match(/post\/([a-f0-9-]{36})/);
@@ -416,7 +416,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                                 // Fallback: just strip query params from current
                                                                 newImageUrl = prev.imageUrl.split('?')[0];
                                                             }
-    
+
                                                             return {
                                                                 ...prev,
                                                                 imageUrl: `${newImageUrl}?t=${Date.now()}`
@@ -431,26 +431,21 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             </div>
                                         </div>
                                     </div>
-                                        <p className="text-gray-600 text-[10px] mt-2 max-w-[200px]">
-                                            ※元のページを開くとサムネイルが生成される場合があります。
-                                        </p>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
+                                        <Loader2 className="animate-spin" size={20} />
+                                        <span className="text-xs text-center">Loading / 読み込み中...</span>
                                     </div>
-                            ) : (
-                            <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
-                                <Loader2 className="animate-spin" size={20} />
-                                <span className="text-xs text-center">Loading / 読み込み中...</span>
-                            </div>
                                 )}
-                        </div>
-                        <div className="text-center">
-                            <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs text-gray-500 truncate">{preview.siteName}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                </div>
-    )
-}
-        </div >
+            )}
+        </div>
     );
 }
 
