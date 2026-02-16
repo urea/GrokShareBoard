@@ -294,7 +294,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         type="button"
                                         onClick={handleDelete}
                                         disabled={loading}
-                                        className="px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-sm flex items-center gap-1 mr-auto"
+                                        className="bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 text-sm mr-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Trash2 size={16} />
                                         Delete / 削除
@@ -303,7 +303,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                 <button
                                     type="button"
                                     onClick={() => setPreview(null)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+                                    disabled={loading}
+                                    className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Cancel / キャンセル
                                 </button>
