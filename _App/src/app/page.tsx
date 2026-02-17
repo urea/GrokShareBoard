@@ -80,15 +80,6 @@ export default function Home() {
   const handleSortChange = (newSort: 'newest' | 'popular') => {
     if (newSort === sortBy) return;
     setSortBy(newSort);
-    setPage(0);
-    setHasMore(true);
-    // Use immediate logic since state update is async
-    setLoading(true);
-    setPosts([]);
-    setTimeout(() => {
-      // Simple way to trigger fresh fetch with new sortBy
-      // In a real app, useEffect[sortBy] might be cleaner, but this matches existing pattern
-    }, 0);
   };
 
   useEffect(() => {
