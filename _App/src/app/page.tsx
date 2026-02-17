@@ -119,8 +119,8 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">📬</span>
                 <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-                  <span>Post & Guide</span>
-                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 投稿はこちら・使い方・規約</span>
+                  <span>投稿はこちら・使い方・規約 / Post & Guide</span>
+                  {/* <span className="text-gray-400 font-normal text-xs md:text-sm">/ 投稿はこちら・使い方・規約</span> */}
                 </div>
               </div>
               <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
@@ -129,7 +129,7 @@ export default function Home() {
               {/* Post Instructions & Form */}
               <section>
                 <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
-                  <h3 className="text-sm font-bold text-white">Share Grok Imagine / 投稿・ストックする</h3>
+                  <h3 className="text-sm font-bold text-white">投稿・ストックする / Share Grok Imagine</h3>
                 </div>
                 <div className="text-xs text-gray-400 mb-4 space-y-2">
                   <p className="font-bold text-gray-300">プロンプトのアイディア保管庫 兼 おかず倉庫</p>
@@ -148,7 +148,7 @@ export default function Home() {
 
               {/* Usage Rules */}
               <section className="text-xs space-y-2 border-t border-gray-700 pt-4">
-                <h3 className="text-sm font-bold text-gray-300 mb-3 underline decoration-[#0099cc] underline-offset-4">Open Archiving Policy / 利用規約・方針</h3>
+                <h3 className="text-sm font-bold text-gray-300 mb-3 underline decoration-[#0099cc] underline-offset-4">利用規約・方針 / Open Archiving Policy</h3>
 
                 <ul className="list-disc list-inside space-y-2 mb-4 text-gray-400">
                   <li>
@@ -166,7 +166,7 @@ export default function Home() {
                 </ul>
 
                 <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-blue-300/80 mt-4">
-                  <p className="font-bold text-blue-400/80 mb-1">How to Edit or Delete / 編集・削除について</p>
+                  <p className="font-bold text-blue-400/80 mb-1">編集・削除について / How to Edit or Delete</p>
                   <p className="text-xs">
                     編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
                   </p>
@@ -182,7 +182,7 @@ export default function Home() {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search prompt, ideas, archives... / 検索..."
+                placeholder="検索... / Search prompt, ideas, archives..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-[#2a2a2a] border border-gray-600 text-sm text-white pl-8 pr-3 py-1.5 rounded focus:ring-1 focus:ring-[#0099cc] outline-none placeholder-gray-500"
@@ -226,10 +226,10 @@ export default function Home() {
               disabled={loading}
               className="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-gray-300 px-8 py-3 rounded-full text-sm font-bold transition-colors border border-gray-700 shadow-md"
             >
-              {loading ? 'Loading...' : 'Load More / もっと読み込む'}
+              {loading ? 'Loading...' : 'もっと読み込む / Load More'}
             </button>
           ) : posts.length > 0 ? (
-            <div className="text-gray-600 text-xs">No more posts / これ以上はありません</div>
+            <div className="text-gray-600 text-xs">これ以上はありません / No more posts</div>
           ) : null}
         </div>
       </main>

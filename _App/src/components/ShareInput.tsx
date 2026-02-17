@@ -161,7 +161,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 .select('id');
 
             if (updateError) throw updateError;
-            if (!updatedData || updatedData.length === 0) throw new Error('Update failed: Permission denied or post not found. check RLS policies. / 更新失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
+            if (!updatedData || updatedData.length === 0) throw new Error('更新失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください) / Update failed: Permission denied or post not found. check RLS policies.');
 
             // Success state
             setUrl('');
@@ -169,7 +169,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setEditablePrompt('');
             setIsEditing(false);
             onPostCreated(); // Refresh feed
-            alert('Post updated successfully! / 投稿を更新しました');
+            alert('投稿を更新しました / Post updated successfully!');
         } catch (err: any) {
             setError(err.message || 'Error updating post');
         } finally {
@@ -179,7 +179,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
     const handleDelete = async () => {
         if (!preview) return;
-        if (!confirm('Are you sure you want to delete this post? / 本当にこの投稿を削除しますか？')) return;
+        if (!confirm('本当にこの投稿を削除しますか？ / Are you sure you want to delete this post?')) return;
 
         setLoading(true);
         try {
@@ -190,7 +190,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 .select('id'); // Request returned rows to verify deletion
 
             if (deleteError) throw deleteError;
-            if (!deletedData || deletedData.length === 0) throw new Error('Delete failed: Permission denied or post not found. check RLS policies. / 削除失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください)');
+            if (!deletedData || deletedData.length === 0) throw new Error('削除失敗: 権限がないか、投稿が見つかりません (RLS設定を確認してください) / Delete failed: Permission denied or post not found. check RLS policies.');
 
             // Success state
             setUrl('');
@@ -198,7 +198,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setEditablePrompt('');
             setIsEditing(false);
             onPostCreated(); // Refresh feed
-            alert('Post deleted successfully! / 投稿を削除しました');
+            alert('投稿を削除しました / Post deleted successfully!');
         } catch (err: any) {
             setError(err.message || 'Error deleting post');
         } finally {
@@ -240,7 +240,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 ]);
 
             if (insertError) {
-                if (insertError.code === '23505') throw new Error('URL already shared!');
+                if (insertError.code === '23505') throw new Error('URLは既に共有されています！ / URL already shared!');
                 throw insertError;
             }
 
@@ -249,7 +249,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setEditablePrompt('');
             onPostCreated();
         } catch (err: any) {
-            setError(err.message || 'Error sharing post');
+            setError('投稿エラー / ' + (err.message || 'Error sharing post'));
         } finally {
             setLoading(false);
         }
@@ -262,7 +262,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 <form onSubmit={handleAnalyze} className="flex gap-2">
                     <input
                         type="url"
-                        placeholder="Paste Grok URL (GrokのURLを貼り付け) ..."
+                        placeholder="GrokのURLを貼り付け / Paste Grok URL ..."
                         className="w-full flex-1 bg-gray-800 border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
@@ -274,7 +274,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 whitespace-nowrap shadow-md shadow-purple-900/20"
                     >
                         {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={18} fill="currentColor" />}
-                        Load / 読み込み
+                        Load
                     </button>
                 </form>
                 {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
@@ -296,11 +296,11 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             */}
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Prompt / Description (プロンプト・説明)</label>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">プロンプト・説明 / Prompt / Description</label>
                                 <textarea
                                     value={editablePrompt}
                                     onChange={(e) => setEditablePrompt(e.target.value)}
-                                    placeholder="Describe the video content or paste the prompt... (Optional) / プロンプトや説明を入力..."
+                                    placeholder="プロンプトや説明を入力... / Describe the video content or paste the prompt... (Optional)"
                                     className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
                                     autoFocus
                                 />
@@ -315,7 +315,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         className="bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 text-sm mr-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Trash2 size={16} />
-                                        Delete / 削除
+                                        Delete
                                     </button>
                                 )}
                                 <button
@@ -324,7 +324,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     disabled={loading}
                                     className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Cancel / キャンセル
+                                    Cancel
                                 </button>
                                 <button
                                     onClick={isEditing ? handleUpdate : handleShare}
@@ -339,7 +339,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     `}
                                 >
                                     {loading ? <Loader2 className="animate-spin" /> : isEditing ? <RefreshCw size={18} /> : <Plus size={18} />}
-                                    {isEditing ? 'Update / 更新する' : 'Share / 投稿する'}
+                                    {isEditing ? 'Update' : 'Share'}
                                 </button>
                             </div>
                         </div>
@@ -402,7 +402,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
                                         <div className="flex flex-col gap-3 items-center max-w-[280px]">
                                             <div className="text-gray-400 text-xs leading-relaxed">
-                                                <p className="mb-2 text-gray-300 font-medium">No Preview Yet / プレビュー未生成</p>
+                                                <p className="mb-2 text-gray-300 font-medium">プレビュー未生成 / No Preview Yet</p>
                                                 <p className="mb-1">画像を読み込めませんが投稿は可能です。</p>
                                                 <p className="text-[10px] text-gray-500">※Grok側でまだ画像が生成されていない可能性があります。以下の手順で確認できます。</p>
                                             </div>
@@ -414,7 +414,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     rel="noopener noreferrer"
                                                     className="flex items-center justify-center gap-2 text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 py-1.5 px-3 rounded text-xs transition-colors border border-blue-500/20"
                                                 >
-                                                    <span className="font-bold">1.</span> Check Original / 元ページを開く
+                                                    <span className="font-bold">1.</span> 元ページを開く / Check Original
                                                 </a>
                                                 <button
                                                     type="button"
@@ -445,7 +445,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     }}
                                                     className="flex items-center justify-center gap-2 text-green-400 hover:text-white bg-green-500/10 hover:bg-green-500/20 py-1.5 px-3 rounded text-xs transition-colors border border-green-500/20 cursor-pointer"
                                                 >
-                                                    <span className="font-bold">2.</span> Retry Image / 画像再読み込み
+                                                    <span className="font-bold">2.</span> 画像再読み込み / Retry Image
                                                 </button>
                                             </div>
                                         </div>
@@ -453,7 +453,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                 ) : (
                                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
                                         <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-xs text-center">Loading / 読み込み中...</span>
+                                        <span className="text-xs text-center">読み込み中... / Loading</span>
                                     </div>
                                 )}
                             </div>

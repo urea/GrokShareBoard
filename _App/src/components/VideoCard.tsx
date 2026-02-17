@@ -123,7 +123,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                         }}
                                         className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
                                     >
-                                        More / 全文
+                                        全文 / More
                                     </button>
                                 ) : (
                                     <div />
@@ -178,7 +178,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                     ✕ Close
                                 </button>
                             </div>
-                            <h3 className="text-sm font-bold text-gray-400 mb-2">Prompt / Description</h3>
+                            <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
                             <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
                                 {post.prompt}
                             </p>
