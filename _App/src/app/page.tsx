@@ -12,10 +12,9 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.23';
+  const APP_VERSION = 'v1.1.25';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -25,7 +24,7 @@ export default function Home() {
       let query = supabase
         .from('posts')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order(sortBy === 'newest' ? 'created_at' : 'clicks', { ascending: false })
         .range(pageNumber * POSTS_PER_PAGE, (pageNumber + 1) * POSTS_PER_PAGE - 1);
 
       if (searchQuery.trim()) {
@@ -75,6 +74,26 @@ export default function Home() {
     setPage(nextPage);
     fetchPosts(nextPage, false);
   };
+
+  const handleSortChange = (newSort: 'newest' | 'popular') => {
+    if (newSort === sortBy) return;
+    setSortBy(newSort);
+    setPage(0);
+    setHasMore(true);
+    // Use immediate logic since state update is async
+    setLoading(true);
+    setPosts([]);
+    setTimeout(() => {
+      // Simple way to trigger fresh fetch with new sortBy
+      // In a real app, useEffect[sortBy] might be cleaner, but this matches existing pattern
+    }, 0);
+  };
+
+  useEffect(() => {
+    setPage(0);
+    setHasMore(true);
+    fetchPosts(0, true);
+  }, [sortBy]);
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
@@ -180,8 +199,24 @@ export default function Home() {
           </details>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-4 flex justify-end">
+        {/* Search & Sort Bar */}
+        <div className="mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Sorting Tabs (Left aligned on Desktop) */}
+          <div className="flex bg-[#2a2a2a] p-1 rounded-lg border border-gray-700 shadow-inner w-full md:w-auto">
+            <button
+              onClick={() => handleSortChange('newest')}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'newest' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              最新 / Newest
+            </button>
+            <button
+              onClick={() => handleSortChange('popular')}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'popular' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              人気 / Popular
+            </button>
+          </div>
+
           <form onSubmit={handleSearch} className="relative w-full max-w-xs flex gap-2">
             <div className="relative flex-1">
               <input
