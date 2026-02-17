@@ -119,8 +119,8 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">📬</span>
                 <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-                  <span>Repository of Ideas & Archives</span>
-                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 自薦他薦・ジャンル不問のプロンプト保管庫</span>
+                  <span>Post & Guide</span>
+                  <span className="text-gray-400 font-normal text-xs md:text-sm">/ 投稿はこちら・使い方・規約</span>
                 </div>
               </div>
               <span className="group-open:rotate-180 transition-transform text-gray-500">▼</span>
