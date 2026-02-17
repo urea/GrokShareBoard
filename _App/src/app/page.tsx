@@ -152,16 +152,19 @@ export default function Home() {
 
                 <ul className="list-disc list-inside space-y-2 mb-4 text-gray-400">
                   <li>
-                    <span className="text-gray-200 font-bold">自薦・他薦不問</span>:
+                    <span className="text-gray-200 font-bold">自薦・他薦不問 / Open Submission</span>:
                     自分の作品だけでなく、SNS等で見かけたお気に入り作品のURLも歓迎します。
+                    <span className="opacity-70 text-[10px] ml-2">(Feel free to share any Grok URLs, including those found on SNS.)</span>
                   </li>
                   <li>
-                    <span className="text-gray-200 font-bold">ジャンル制限なし</span>:
+                    <span className="text-gray-200 font-bold">ジャンル制限なし / No Genre Limits</span>:
                     プロンプト研究から「おかず作品」の収集まで。全年齢〜NSFWまであらゆる表現を許容します。
+                    <span className="opacity-70 text-[10px] ml-2">(All genres from research to NSFW are allowed.)</span>
                   </li>
                   <li>
-                    <span className="text-red-400 font-bold">禁止事項</span>:
+                    <span className="text-red-400 font-bold">禁止事項 / Prohibitions</span>:
                     児童ポルノ、犯罪、明白な権利侵害など、法律に抵触する内容は絶対に投稿しないでください。
+                    <span className="opacity-70 text-[10px] ml-2">(Illegal content and copyright infringement are strictly prohibited.)</span>
                   </li>
                 </ul>
 
@@ -169,6 +172,7 @@ export default function Home() {
                   <p className="font-bold text-blue-400/80 mb-1">編集・削除について / How to Edit or Delete</p>
                   <p className="text-xs">
                     編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
+                    <span className="opacity-70 text-[10px] ml-2">(To edit or delete, re-enter the URL and click "Load".)</span>
                   </p>
                 </div>
               </section>
