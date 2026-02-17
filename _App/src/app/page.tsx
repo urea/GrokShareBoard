@@ -12,9 +12,11 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.25';
+  const APP_VERSION = 'v1.1.26';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
