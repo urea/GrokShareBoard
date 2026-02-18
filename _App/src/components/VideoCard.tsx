@@ -137,27 +137,15 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                 </p>
                             )}
                             <div className="flex items-center justify-between">
-                                {post.prompt ? (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowFullPrompt(true);
-                                        }}
-                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
-                                    >
-                                        全文 / More
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowFullPrompt(true);
-                                        }}
-                                        className="text-[10px] text-gray-400 hover:text-gray-300 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
-                                    >
-                                        コメント / Comment
-                                    </button>
-                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowFullPrompt(true);
+                                    }}
+                                    className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1.5 py-0.5 rounded inline-block transition-colors"
+                                >
+                                    詳細・コメント / Details
+                                </button>
                                 <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
                                     <MessageSquare size={10} />
                                     <span>{post.comment_count || 0}</span>
