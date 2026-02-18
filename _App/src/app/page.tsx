@@ -20,7 +20,7 @@ export default function Home() {
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.2.2';
+  const APP_VERSION = 'v1.3.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;

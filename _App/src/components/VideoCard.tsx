@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2 } from 'lucide-react';
+import { Copy, MousePointer2, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
+import CommentSection from './CommentSection';
 
 interface VideoCardProps {
     post: Post;
@@ -147,8 +148,20 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                         全文 / More
                                     </button>
                                 ) : (
-                                    <div />
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullPrompt(true);
+                                        }}
+                                        className="text-[10px] text-gray-400 hover:text-gray-300 underline cursor-pointer bg-black/50 px-1 rounded inline-block"
+                                    >
+                                        コメント / Comment
+                                    </button>
                                 )}
+                                <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
+                                    <MessageSquare size={10} />
+                                    <span>{post.comment_count || 0}</span>
+                                </div>
                                 <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
                                     <MousePointer2 size={10} />
                                     <span>{post.clicks || 0}</span>
@@ -212,8 +225,11 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             </div>
                             <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
                             <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
-                                {post.prompt}
+                                {post.prompt || <span className="text-gray-500 italic">No prompt provided.</span>}
                             </p>
+
+                            {/* Comment Section (Integrated in Modal) */}
+                            <CommentSection postId={post.id} isAdmin={isAdmin} />
                         </div>
                     </div>
                 </ModalPortal>

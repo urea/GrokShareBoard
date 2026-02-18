@@ -12,5 +12,14 @@ export interface Post {
     title: string | null;
     clicks: number | null;
     nsfw: boolean;
+    comment_count: number;
+    created_at: string;
+}
+
+export interface Comment {
+    id: string;
+    post_id: string;
+    content: string;
+    client_id: string;
     created_at: string;
 }
