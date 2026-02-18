@@ -20,7 +20,7 @@ export default function Home() {
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.2.1';
+  const APP_VERSION = 'v1.2.2';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -122,7 +122,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
       {/* Simple Title Bar (Monsnode style: Blue/Solid) */}
-      <header className="sticky top-0 z-50 bg-[#0099cc] shadow-md">
+      <header className="bg-[#0099cc] shadow-md">
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
           <h1
             className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2 cursor-pointer select-none"
