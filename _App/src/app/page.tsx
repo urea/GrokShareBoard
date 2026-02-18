@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 
@@ -15,8 +15,11 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
+  const [showNsfw, setShowNsfw] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminClickCount, setAdminClickCount] = useState(0);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.1.26';
+  const APP_VERSION = 'v1.2.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -28,6 +31,10 @@ export default function Home() {
         .select('*')
         .order(sortBy === 'newest' ? 'created_at' : 'clicks', { ascending: false })
         .range(pageNumber * POSTS_PER_PAGE, (pageNumber + 1) * POSTS_PER_PAGE - 1);
+
+      if (!showNsfw) {
+        query = query.eq('nsfw', false);
+      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.trim();
@@ -61,8 +68,21 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Load NSFW preference from localStorage
+    const savedNsfw = localStorage.getItem('grok_share_show_nsfw');
+    if (savedNsfw === 'true') {
+      setShowNsfw(true);
+    }
     fetchPosts(0, true);
   }, []);
+
+  // Update localStorage when showNsfw changes
+  useEffect(() => {
+    localStorage.setItem('grok_share_show_nsfw', showNsfw.toString());
+    setPage(0);
+    setHasMore(true);
+    fetchPosts(0, true);
+  }, [showNsfw]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +102,19 @@ export default function Home() {
     setSortBy(newSort);
   };
 
+  const handleTitleClick = () => {
+    const newCount = adminClickCount + 1;
+    if (newCount >= 5) {
+      setIsAdmin(!isAdmin);
+      setAdminClickCount(0);
+      alert(isAdmin ? '管理者モードを終了しました / Admin Mode Disabled' : '管理者モードが有効になりました / Admin Mode Enabled');
+    } else {
+      setAdminClickCount(newCount);
+      // Reset count after 2 seconds of inactivity
+      setTimeout(() => setAdminClickCount(0), 2000);
+    }
+  };
+
   useEffect(() => {
     setPage(0);
     setHasMore(true);
@@ -93,13 +126,45 @@ export default function Home() {
       {/* Simple Title Bar (Monsnode style: Blue/Solid) */}
       <header className="sticky top-0 z-50 bg-[#0099cc] shadow-md">
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2">
+          <h1
+            className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2 cursor-pointer select-none"
+            onClick={handleTitleClick}
+          >
             GrokShareBoard
             <span className="text-xs font-normal opacity-80">{APP_VERSION}</span>
+            {isAdmin && <span className="ml-2 text-[10px] bg-white text-blue-600 px-1 rounded animate-pulse uppercase">Admin</span>}
           </h1>
 
           {/* Header Links */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* NSFW Toggle Switch (Segmented Control) */}
+            <div className="flex bg-black/20 p-0.5 rounded-full border border-white/10 w-fit shadow-inner">
+              <button
+                onClick={() => setShowNsfw(false)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${!showNsfw
+                  ? 'bg-green-600 text-white shadow-sm'
+                  : 'text-white/40 hover:text-white/70'
+                  }`}
+                title="セーフモード / Safe Mode"
+              >
+                <ShieldCheck size={12} />
+                <span className="hidden sm:inline">SAFE</span>
+              </button>
+              <button
+                onClick={() => setShowNsfw(true)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${showNsfw
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-white/40 hover:text-white/70'
+                  }`}
+                title="NSFW表示ON / NSFW Mode"
+              >
+                <ShieldAlert size={12} />
+                <span className="hidden sm:inline">NSFW</span>
+              </button>
+            </div>
+
+            <div className="h-4 w-[1px] bg-white/20 mx-1" />
+
             <a
               href="https://github.com/urea/GrokShareBoard/blob/main/README.md"
               target="_blank"
@@ -236,7 +301,15 @@ export default function Home() {
             posts.map((post) => (
               <div key={post.id} className="w-full">
                 {/* Force compact mode and pass style prop for overlay look */}
-                <VideoCard post={post} compact={true} overlayStyle={true} />
+                <VideoCard
+                  post={post}
+                  compact={true}
+                  overlayStyle={true}
+                  isAdmin={isAdmin}
+                  onUpdate={(updatedPost) => {
+                    setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
+                  }}
+                />
               </div>
             ))
           ) : (

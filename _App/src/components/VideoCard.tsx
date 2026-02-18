@@ -11,9 +11,11 @@ interface VideoCardProps {
     post: Post;
     compact?: boolean;
     overlayStyle?: boolean;
+    isAdmin?: boolean;
+    onUpdate?: (post: Post) => void;
 }
 
-export default function VideoCard({ post, compact = false, overlayStyle = false }: VideoCardProps) {
+export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate }: VideoCardProps) {
     // Helper to enforce the correct thumbnail pattern [UUID]_thumbnail.jpg
     const getValidImageUrl = (url: string | null) => {
         if (!url) return '/placeholder.png';
@@ -37,6 +39,25 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
             await supabase.rpc('increment_click', { post_id: post.id });
         } catch (err) {
             console.error('Failed to increment click:', err);
+        }
+    };
+
+    const handleAdminNsfwToggle = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newNsfw = !post.nsfw;
+        try {
+            const { error } = await supabase
+                .from('posts')
+                .update({ nsfw: newNsfw })
+                .eq('id', post.id);
+
+            if (error) throw error;
+            if (onUpdate) {
+                onUpdate({ ...post, nsfw: newNsfw });
+            }
+        } catch (err) {
+            console.error('Failed to update NSFW status:', err);
+            alert('Failed to update NSFW status');
         }
     };
 
@@ -132,6 +153,22 @@ export default function VideoCard({ post, compact = false, overlayStyle = false 
                                     <MousePointer2 size={10} />
                                     <span>{post.clicks || 0}</span>
                                 </div>
+                                {post.nsfw && (
+                                    <div className="text-[10px] text-white bg-red-600/80 px-1.5 py-0.5 rounded font-bold border border-red-500/50 backdrop-blur-sm">
+                                        NSFW
+                                    </div>
+                                )}
+                                {isAdmin && (
+                                    <button
+                                        onClick={handleAdminNsfwToggle}
+                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-colors ${post.nsfw
+                                            ? 'bg-red-600 border-red-400 text-white'
+                                            : 'bg-gray-700 border-gray-500 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                    >
+                                        ADMIN:{post.nsfw ? 'NSFW' : 'SFW'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

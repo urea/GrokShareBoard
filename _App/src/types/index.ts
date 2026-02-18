@@ -11,5 +11,6 @@ export interface Post {
     site_name: string | null;
     title: string | null;
     clicks: number | null;
+    nsfw: boolean;
     created_at: string;
 }

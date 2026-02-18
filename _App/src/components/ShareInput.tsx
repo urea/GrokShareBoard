@@ -24,6 +24,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [isNsfw, setIsNsfw] = useState(false);
 
 
 
@@ -83,6 +84,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     userId: existingPost.user_id
                 });
                 setEditablePrompt(existingPost.prompt || '');
+                setIsNsfw(!!existingPost.nsfw); // Set NSFW state from DB
                 // setEditableUserId(existingPost.user_id || ''); // Abolished
                 setLoading(false);
                 return;
@@ -155,6 +157,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 .update({
                     prompt: editablePrompt,
                     image_url: finalImageUrl,
+                    nsfw: isNsfw,
                     // user_id: editableUserId.trim() || null, // Abolished: Do not update user_id
                 })
                 .eq('url', preview.url)
@@ -235,7 +238,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         site_name: preview.siteName,
                         title: preview.title,
                         width: 0,
-                        height: 0
+                        height: 0,
+                        nsfw: isNsfw
                     }
                 ]);
 
@@ -247,6 +251,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setUrl('');
             setPreview(null);
             setEditablePrompt('');
+            setIsNsfw(false);
             onPostCreated();
         } catch (err: any) {
             setError('投稿エラー / ' + (err.message || 'Error sharing post'));
@@ -304,6 +309,20 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     className="w-full bg-gray-800 border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
                                     autoFocus
                                 />
+                            </div>
+
+                            <div className="flex items-center gap-2 bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 w-fit">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={isNsfw}
+                                        onChange={(e) => setIsNsfw(e.target.checked)}
+                                        className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500 focus:ring-offset-gray-900"
+                                    />
+                                    <span className={`text-sm font-bold transition-colors ${isNsfw ? 'text-red-400' : 'text-gray-400 group-hover:text-gray-300'}`}>
+                                        NSFW作品として投稿 / Mark as NSFW
+                                    </span>
+                                </label>
                             </div>
 
                             <div className="flex justify-end gap-3 pt-2">
