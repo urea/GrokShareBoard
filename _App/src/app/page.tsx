@@ -18,8 +18,9 @@ export default function Home() {
   const [showNsfw, setShowNsfw] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.2.0';
+  const APP_VERSION = 'v1.2.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -73,16 +74,18 @@ export default function Home() {
     if (savedNsfw === 'true') {
       setShowNsfw(true);
     }
-    fetchPosts(0, true);
+    setIsInitialized(true);
   }, []);
 
-  // Update localStorage when showNsfw changes
+  // Consolidated fetch effect for filter/sort changes
   useEffect(() => {
+    if (!isInitialized) return;
+
     localStorage.setItem('grok_share_show_nsfw', showNsfw.toString());
     setPage(0);
     setHasMore(true);
     fetchPosts(0, true);
-  }, [showNsfw]);
+  }, [showNsfw, sortBy, isInitialized]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,11 +118,6 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    setPage(0);
-    setHasMore(true);
-    fetchPosts(0, true);
-  }, [sortBy]);
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
