@@ -153,11 +153,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     <MousePointer2 size={10} />
                                     <span>{post.clicks || 0}</span>
                                 </div>
-                                {post.nsfw && (
-                                    <div className="text-[10px] text-white bg-red-600/80 px-1.5 py-0.5 rounded font-bold border border-red-500/50 backdrop-blur-sm">
-                                        NSFW
-                                    </div>
-                                )}
                                 {isAdmin && (
                                     <button
                                         onClick={handleAdminNsfwToggle}
