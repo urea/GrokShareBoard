@@ -146,13 +146,16 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                 >
                                     詳細・コメント / Details
                                 </button>
-                                <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
-                                    <MessageSquare size={10} />
-                                    <span>{post.comment_count || 0}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/5">
-                                    <MousePointer2 size={10} />
-                                    <span>{post.clicks || 0}</span>
+                                <div className="flex items-center gap-2 text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 shadow-inner">
+                                    <div className="flex items-center gap-1" title="Comments">
+                                        <MessageSquare size={10} />
+                                        <span>{post.comment_count || 0}</span>
+                                    </div>
+                                    <div className="w-[1px] h-2 bg-white/10" />
+                                    <div className="flex items-center gap-1" title="Clicks">
+                                        <MousePointer2 size={10} />
+                                        <span>{post.clicks || 0}</span>
+                                    </div>
                                 </div>
                                 {isAdmin && (
                                     <button
