@@ -13,6 +13,7 @@ export interface Post {
     clicks: number | null;
     nsfw: boolean;
     comment_count: number;
+    last_comment_at: string | null;
     created_at: string;
 }
 

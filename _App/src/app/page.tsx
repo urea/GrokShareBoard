@@ -14,13 +14,13 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'comment'>('newest');
   const [showNsfw, setShowNsfw] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.3.3';
+  const APP_VERSION = 'v1.4.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -30,8 +30,20 @@ export default function Home() {
       let query = supabase
         .from('posts')
         .select('*')
-        .order(sortBy === 'newest' ? 'created_at' : 'clicks', { ascending: false })
         .range(pageNumber * POSTS_PER_PAGE, (pageNumber + 1) * POSTS_PER_PAGE - 1);
+
+      if (sortBy === 'newest') {
+        query = query.order('created_at', { ascending: false });
+      } else if (sortBy === 'popular') {
+        query = query.order('clicks', { ascending: false });
+      } else if (sortBy === 'comment') {
+        // Sort by last_comment_at (fallback to created_at if null)
+        // Note: COALESCE sorting might require a raw order string or careful use of .order()
+        // Here we use the fact that last_comment_at is meant to be prioritized.
+        // For Supabase client, we can use a custom order or multiple orders as fallback.
+        query = query.order('last_comment_at', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false });
+      }
 
       if (!showNsfw) {
         query = query.eq('nsfw', false);
@@ -100,7 +112,7 @@ export default function Home() {
     fetchPosts(nextPage, false);
   };
 
-  const handleSortChange = (newSort: 'newest' | 'popular') => {
+  const handleSortChange = (newSort: 'newest' | 'popular' | 'comment') => {
     if (newSort === sortBy) return;
     setSortBy(newSort);
   };
@@ -270,6 +282,12 @@ export default function Home() {
               className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'popular' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
             >
               人気 / Popular
+            </button>
+            <button
+              onClick={() => handleSortChange('comment')}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'comment' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              コメント順 / Active
             </button>
           </div>
 
