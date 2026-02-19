@@ -271,7 +271,18 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             placeholder="GrokのURLを貼り付け / Paste Grok URL ..."
                             className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
                             value={url}
-                            onChange={(e) => setUrl(e.target.value)}
+                            onChange={(e) => {
+                                let inputUrl = e.target.value;
+                                try {
+                                    const urlObj = new URL(inputUrl);
+                                    if (urlObj.hostname === 'grok.com' && urlObj.pathname.startsWith('/imagine/post/')) {
+                                        inputUrl = `${urlObj.origin}${urlObj.pathname}`;
+                                    }
+                                } catch (err) {
+                                    // Ignore if not a valid URL yet
+                                }
+                                setUrl(inputUrl);
+                            }}
                             required
                         />
                     </div>
