@@ -373,9 +373,40 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </div>
                                     </div>
                                 ) : previewImageError ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-4 text-center">
-                                        <AlertTriangle size={24} className="text-yellow-600 mb-2" />
-                                        <p className="text-[10px] text-gray-500 leading-tight">プレビュー未生成ですが<br />投稿は可能です</p>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-3 text-center">
+                                        <div className="flex flex-col gap-2 items-center w-full">
+                                            <div className="text-gray-400 text-[10px] leading-snug mb-1">
+                                                <p className="font-bold text-gray-200 text-xs mb-1 flex items-center justify-center gap-1">
+                                                    <AlertTriangle size={12} className="text-yellow-500" />
+                                                    Preview Error
+                                                </p>
+                                                <p>読み込めませんが投稿は可能です。</p>
+                                                <p className="text-[9px] opacity-50 italic">※Grok側の生成待ちかもしれません</p>
+                                            </div>
+
+                                            <div className="w-full flex flex-col gap-1.5">
+                                                <a
+                                                    href={preview.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="w-full flex items-center justify-center gap-1.5 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 py-2 rounded-lg text-[10px] font-bold border border-blue-500/20 transition-colors"
+                                                >
+                                                    1. 元ページを確認
+                                                </a>
+                                                <button
+                                                    onClick={() => {
+                                                        setPreview(prev => prev ? ({
+                                                            ...prev,
+                                                            imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}`
+                                                        }) : null);
+                                                        setPreviewImageError(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-1.5 text-green-400 bg-green-500/10 hover:bg-green-500/20 py-2 rounded-lg text-[10px] font-bold border border-green-500/20 transition-colors"
+                                                >
+                                                    2. 再読み込み試行
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="absolute inset-0 flex items-center justify-center bg-gray-950">
