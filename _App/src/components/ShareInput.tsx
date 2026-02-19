@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, X, Loader2, Image as ImageIcon, AlertTriangle, Sparkles, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { Search, Plus, X, Loader2, Image as ImageIcon, AlertTriangle, Sparkles, RefreshCw, Trash2, Edit, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Define local interface for Preview Data
@@ -386,11 +386,11 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         <div className="flex flex-col gap-2 items-center w-full">
                                             <div className="text-gray-400 text-[10px] leading-snug mb-1">
                                                 <p className="font-bold text-gray-200 text-xs mb-1 flex items-center justify-center gap-1">
-                                                    <AlertTriangle size={12} className="text-yellow-500" />
-                                                    Preview Error
+                                                    <Clock size={12} className="text-blue-400" />
+                                                    Preview Pending
                                                 </p>
-                                                <p>読み込めませんが投稿は可能です。</p>
-                                                <p className="text-[9px] opacity-50 italic">※Grok側の生成待ちかもしれません</p>
+                                                <p className="text-gray-300 font-medium">プレビュー表示準備中</p>
+                                                <p className="text-[9px] opacity-70 mt-1">生成には一度元ページを開く必要があります。</p>
                                             </div>
 
                                             <div className="w-full flex flex-col gap-1.5">
@@ -400,7 +400,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     rel="noopener noreferrer"
                                                     className="w-full flex items-center justify-center gap-1.5 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 py-2 rounded-lg text-[10px] font-bold border border-blue-500/20 transition-colors"
                                                 >
-                                                    1. 元ページを確認
+                                                    1. 元ページを開いて生成
                                                 </a>
                                                 <button
                                                     onClick={() => {
@@ -417,7 +417,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     }}
                                                     className="w-full flex items-center justify-center gap-1.5 text-green-400 bg-green-500/10 hover:bg-green-500/20 py-2 rounded-lg text-[10px] font-bold border border-green-500/20 transition-colors"
                                                 >
-                                                    2. 再読み込み試行
+                                                    2. プレビューを再読み込み
                                                 </button>
                                             </div>
                                         </div>
