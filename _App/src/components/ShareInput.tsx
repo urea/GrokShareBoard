@@ -352,15 +352,24 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                             onError={() => {
                                                 console.log("Image load failed, trying fallbacks...");
-                                                const cleanUrl = preview.imageUrl.split('?')[0];
+                                                const currentUrl = preview.imageUrl;
+                                                const cleanUrl = currentUrl.split('?')[0];
+
                                                 if (cleanUrl.includes('_thumbnail.jpg')) {
-                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: prev.imageUrl.replace('_thumbnail.jpg', '.png') }) : null);
+                                                    // Try .png
+                                                    const next = currentUrl.replace('_thumbnail.jpg', '.png');
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else if (cleanUrl.endsWith('.png')) {
                                                     if (cleanUrl.includes('/share-videos/')) {
-                                                        setPreview(prev => prev ? ({ ...prev, imageUrl: prev.imageUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg') }) : null);
+                                                        // Try /images/ UUID.jpg
+                                                        const next = currentUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
+                                                        setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
                                                     }
+                                                } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
+                                                    // We've tried everything
+                                                    setPreviewImageError(true);
                                                 } else {
                                                     setPreviewImageError(true);
                                                 }
@@ -395,10 +404,15 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 </a>
                                                 <button
                                                     onClick={() => {
-                                                        setPreview(prev => prev ? ({
-                                                            ...prev,
-                                                            imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}`
-                                                        }) : null);
+                                                        // RESET to canonical thumbnail on retry
+                                                        const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
+                                                        if (uuidMatch) {
+                                                            const uuid = uuidMatch[1];
+                                                            const resetUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg?t=${Date.now()}`;
+                                                            setPreview(prev => prev ? ({ ...prev, imageUrl: resetUrl }) : null);
+                                                        } else {
+                                                            setPreview(prev => prev ? ({ ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}` }) : null);
+                                                        }
                                                         setPreviewImageError(false);
                                                     }}
                                                     className="w-full flex items-center justify-center gap-1.5 text-green-400 bg-green-500/10 hover:bg-green-500/20 py-2 rounded-lg text-[10px] font-bold border border-green-500/20 transition-colors"
