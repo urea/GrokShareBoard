@@ -22,7 +22,7 @@ export default function Home() {
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.4.1';
+  const APP_VERSION = 'v1.4.3';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -235,9 +235,13 @@ export default function Home() {
                   </p>
                 </div>
                 <ShareInput onPostCreated={() => {
-                  setPage(0);
-                  setHasMore(true);
-                  fetchPosts(0, true);
+                  if (sortBy !== 'newest') {
+                    setSortBy('newest');
+                  } else {
+                    setPage(0);
+                    setHasMore(true);
+                    fetchPosts(0, true);
+                  }
                 }} />
               </section>
 
