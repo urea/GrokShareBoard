@@ -7,6 +7,7 @@ import VideoCard from '@/components/VideoCard';
 import { Search, FileText, History, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
+import NsfwWarningModal from '@/components/NsfwWarningModal';
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -16,11 +17,12 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'comment'>('newest');
   const [showNsfw, setShowNsfw] = useState(false);
+  const [showNsfwConfirm, setShowNsfwConfirm] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.4.0';
+  const APP_VERSION = 'v1.4.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -161,7 +163,13 @@ export default function Home() {
                 <span className="hidden sm:inline">SAFE</span>
               </button>
               <button
-                onClick={() => setShowNsfw(true)}
+                onClick={() => {
+                  if (!showNsfw) {
+                    setShowNsfwConfirm(true);
+                  } else {
+                    setShowNsfw(false);
+                  }
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${showNsfw
                   ? 'bg-red-600 text-white shadow-sm'
                   : 'text-white/40 hover:text-white/70'
@@ -354,6 +362,12 @@ export default function Home() {
           ) : null}
         </div>
       </main>
+
+      <NsfwWarningModal
+        isOpen={showNsfwConfirm}
+        onClose={() => setShowNsfwConfirm(false)}
+        onConfirm={() => setShowNsfw(true)}
+      />
     </div>
   );
 }
