@@ -368,12 +368,12 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
                                                 if (cleanUrl.includes('_thumbnail.jpg')) {
                                                     // Try .png
-                                                    const next = currentUrl.replace('_thumbnail.jpg', '.png');
+                                                    const next = cleanUrl.replace('_thumbnail.jpg', '.png');
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else if (cleanUrl.endsWith('.png')) {
                                                     if (cleanUrl.includes('/share-videos/')) {
                                                         // Try /images/ UUID.jpg
-                                                        const next = currentUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
+                                                        const next = cleanUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
                                                         setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
