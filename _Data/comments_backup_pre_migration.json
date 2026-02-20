@@ -1,0 +1,30 @@
+[
+  {
+    "id": "a5724914-e133-4d0d-8bcc-aa90775292cb",
+    "post_id": "9dea8afa-5286-4b67-b29a-a44e7637e4fe",
+    "content": "アンパンマンだいすき！！",
+    "client_id": "2cf1457f-81c8-451b-8a90-6afe6fd5f8de",
+    "created_at": "2026-02-18T23:51:20.5469+00:00"
+  },
+  {
+    "id": "9dbce125-2c3f-4004-8d14-66355d9dd764",
+    "post_id": "9dea8afa-5286-4b67-b29a-a44e7637e4fe",
+    "content": "ぼくも大好き！ダンス最高！！（コメント機能のテスト投稿だよ）",
+    "client_id": "2cf1457f-81c8-451b-8a90-6afe6fd5f8de",
+    "created_at": "2026-02-19T00:08:17.417504+00:00"
+  },
+  {
+    "id": "adfe1b1b-c027-4656-a6b7-6809381d4026",
+    "post_id": "225f63ae-ffca-461f-bbe1-008d0c40136a",
+    "content": "すごい特殊性癖だ",
+    "client_id": "cf1cb865-6504-4898-a227-6d45fc9e4da0",
+    "created_at": "2026-02-20T02:48:47.741524+00:00"
+  },
+  {
+    "id": "2ba66b81-e1be-4b2c-a802-2bd4da1c0767",
+    "post_id": "225f63ae-ffca-461f-bbe1-008d0c40136a",
+    "content": "なんかもう優勝です",
+    "client_id": "b9113c36-8626-4cee-9b61-f394c2a23ad7",
+    "created_at": "2026-02-20T04:09:51.199542+00:00"
+  }
+]

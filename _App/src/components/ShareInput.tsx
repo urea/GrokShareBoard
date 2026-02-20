@@ -234,10 +234,14 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 }
             }
 
+            const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
+            const grokUuid = uuidMatch ? uuidMatch[1] : undefined;
+
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert([
                     {
+                        id: grokUuid, // EXPLICITLY SET THE ID TO GROK UUID
                         url: preview.url,
                         prompt: editablePrompt,
                         user_id: clientId, // Use anonymous Client ID
