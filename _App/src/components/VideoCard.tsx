@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2, MessageSquare } from 'lucide-react';
+import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
 import CommentSection from './CommentSection';
@@ -33,13 +33,23 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
     const [videoError, setVideoError] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [showFullPrompt, setShowFullPrompt] = useState(false);
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [localViews, setLocalViews] = useState<number>(post.views || 0);
 
     const handleLinkClick = async () => {
-        window.open(post.url, '_blank');
+        // Instead of opening the Grok URL, open the video/image modal
+        setShowVideoModal(true);
+
+        // Optimistic UI update for views
+        setLocalViews(prev => prev + 1);
+
+        // Call RPC to increment view count in DB
         try {
-            await supabase.rpc('increment_click', { post_id: post.id });
+            await supabase.rpc('increment_view', { post_id: post.id });
         } catch (err) {
-            console.error('Failed to increment click:', err);
+            console.error('Failed to increment view:', err);
+            // Revert on failure (optional, but good UX)
+            setLocalViews(prev => Math.max(0, prev - 1));
         }
     };
 
@@ -134,22 +144,46 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                 </p>
                             )}
                             <div className="flex items-center justify-between">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowFullPrompt(true);
-                                    }}
-                                    className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1.5 py-0.5 rounded inline-block transition-colors"
-                                >
-                                    詳細・コメント / Details
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullPrompt(true);
+                                        }}
+                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1.5 py-0.5 rounded inline-block transition-colors"
+                                    >
+                                        詳細・コメント / Details
+                                    </button>
+                                    <a
+                                        href={post.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            try {
+                                                await supabase.rpc('increment_click', { post_id: post.id });
+                                            } catch (err) {
+                                                console.error('Failed to increment click:', err);
+                                            }
+                                        }}
+                                        className="text-[10px] text-gray-300 hover:text-white flex items-center gap-1 bg-black/50 px-1.5 py-0.5 rounded border border-gray-600 transition-colors"
+                                        title="Open in Grok"
+                                    >
+                                        <ExternalLink size={10} /> Grok
+                                    </a>
+                                </div>
                                 <div className="flex items-center gap-2 text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 shadow-inner">
                                     <div className="flex items-center gap-1" title="Comments">
                                         <MessageSquare size={10} />
                                         <span>{post.comment_count || 0}</span>
                                     </div>
                                     <div className="w-[1px] h-2 bg-white/10" />
-                                    <div className="flex items-center gap-1" title="Clicks">
+                                    <div className="flex items-center gap-1" title="Views">
+                                        <Eye size={10} />
+                                        <span>{localViews}</span>
+                                    </div>
+                                    <div className="w-[1px] h-2 bg-white/10" />
+                                    <div className="flex items-center gap-1" title="Grok Opens">
                                         <MousePointer2 size={10} />
                                         <span>{post.clicks || 0}</span>
                                     </div>
@@ -185,7 +219,22 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="absolute top-3 right-3 flex gap-2">
+                            <div className="absolute top-3 right-3 flex gap-2 items-center">
+                                <a
+                                    href={post.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={async () => {
+                                        try {
+                                            await supabase.rpc('increment_click', { post_id: post.id });
+                                        } catch (err) {
+                                            console.error('Failed to increment click:', err);
+                                        }
+                                    }}
+                                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
+                                >
+                                    <ExternalLink size={14} /> Grokで開く
+                                </a>
                                 <button
                                     onClick={() => {
                                         if (!post.prompt) return;
@@ -206,9 +255,9 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                 </button>
                                 <button
                                     onClick={() => setShowFullPrompt(false)}
-                                    className="text-gray-400 hover:text-white"
+                                    className="text-gray-400 hover:text-white ml-2"
                                 >
-                                    ✕ Close
+                                    ✕
                                 </button>
                             </div>
                             <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
@@ -218,6 +267,62 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
 
                             {/* Comment Section (Integrated in Modal) */}
                             <CommentSection postId={post.id} isAdmin={isAdmin} />
+                        </div>
+                    </div>
+                </ModalPortal>
+            )}
+
+            {/* Video / Full Image Preview Modal */}
+            {showVideoModal && (
+                <ModalPortal>
+                    <div
+                        className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowVideoModal(false);
+                        }}
+                    >
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowVideoModal(false);
+                            }}
+                            className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-[10010] p-2 bg-black/50 rounded-full"
+                        >
+                            ✕ Close
+                        </button>
+
+                        <div
+                            className="relative flex items-center justify-center w-full max-w-5xl max-h-[90vh] p-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {post.video_url && !videoError ? (
+                                <video
+                                    src={post.video_url}
+                                    autoPlay
+                                    controls
+                                    className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black border border-gray-800"
+                                    onError={() => {
+                                        console.error("Main video playback failed");
+                                        setVideoError(true);
+                                    }}
+                                />
+                            ) : (
+                                <img
+                                    src={post.image_url ? post.image_url.replace('_thumbnail.jpg', '.jpg') : displayImageUrl}
+                                    alt={post.prompt || 'Grok generation full image'}
+                                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black border border-gray-800"
+                                    onError={(e) => {
+                                        // Simple fallback mechanism for modal
+                                        const target = e.currentTarget;
+                                        if (target.src.endsWith('.jpg') && !target.src.includes('_thumbnail')) {
+                                            target.src = target.src.replace('.jpg', '.png');
+                                        } else if (target.src !== displayImageUrl) {
+                                            target.src = displayImageUrl;
+                                        }
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 </ModalPortal>
@@ -238,9 +343,32 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             </span>
                             {!compact && <span>{post.site_name || 'Grok'}</span>}
                         </div>
-                        <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50">
-                            <MousePointer2 size={compact ? 10 : 12} className="text-gray-400" />
-                            <span className="font-medium text-gray-300">{post.clicks || 0}</span>
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={post.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                        await supabase.rpc('increment_click', { post_id: post.id });
+                                    } catch (err) {
+                                        console.error('Failed to increment click:', err);
+                                    }
+                                }}
+                                className="flex items-center gap-1 mr-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                title="Open in Grok"
+                            >
+                                <ExternalLink size={compact ? 12 : 14} />
+                            </a>
+                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Views">
+                                <Eye size={compact ? 10 : 12} className="text-gray-400" />
+                                <span className="font-medium text-gray-300">{localViews}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Grok Opens">
+                                <MousePointer2 size={compact ? 10 : 12} className="text-gray-400" />
+                                <span className="font-medium text-gray-300">{post.clicks || 0}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
