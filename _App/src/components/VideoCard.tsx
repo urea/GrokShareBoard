@@ -83,7 +83,9 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             const currentSrc = target.src;
 
                             if (currentSrc.includes('_thumbnail.jpg')) {
-                                target.src = currentSrc.replace('_thumbnail.jpg', '.png');
+                                target.src = currentSrc.replace('_thumbnail.jpg', '').replace('/share-videos/', '/share-images/') + '.jpg';
+                            } else if (currentSrc.includes('/share-images/')) {
+                                target.src = currentSrc.replace('/share-images/', '/share-videos/').replace('.jpg', '.png');
                             } else if (currentSrc.endsWith('.png')) {
                                 if (currentSrc.includes('/share-videos/')) {
                                     target.src = currentSrc.replace('/share-videos/', '/images/').replace('.png', '.jpg');
@@ -91,12 +93,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     setImageError(true);
                                 }
                             } else if (currentSrc.includes('/images/') && currentSrc.endsWith('.jpg')) {
-                                const canonicalThumbnail = currentSrc.replace('/images/', '/share-videos/').replace('.jpg', '_thumbnail.jpg');
-                                if (canonicalThumbnail !== currentSrc) {
-                                    target.src = canonicalThumbnail;
-                                } else {
-                                    setImageError(true);
-                                }
+                                setImageError(true); // Stop the infinite loop here!
                             } else {
                                 setImageError(true);
                             }

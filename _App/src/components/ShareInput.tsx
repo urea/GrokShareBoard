@@ -99,6 +99,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Detect if video actually exists before setting it in preview
             // (Uses a temporary video element to check availability)
             let detectedVideoUrl = '';
+            let detectedImageUrl = imageUrl;
+
             try {
                 const checkVideo = () => new Promise<string>((resolve) => {
                     const v = document.createElement('video');
@@ -109,15 +111,21 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     // Timeout after 3 seconds to avoid hanging
                     setTimeout(() => resolve(''), 3000);
                 });
+
                 detectedVideoUrl = await checkVideo();
+
+                // If it's not a video, it might be a static image under /share-images/
+                if (!detectedVideoUrl) {
+                    detectedImageUrl = `https://imagine-public.x.ai/imagine-public/share-images/${uuid}.jpg`;
+                }
             } catch (e) {
-                console.warn("Video detection failed, defaulting to no video.");
+                console.warn("Media detection failed, defaulting to thumbnail.");
             }
 
             const mockPreview: PreviewData = {
                 url: url,
                 videoUrl: detectedVideoUrl,
-                imageUrl: imageUrl,
+                imageUrl: detectedImageUrl,
                 siteName: 'Grok',
                 title: 'Grok Creation',
                 description: '',
@@ -367,8 +375,12 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 const cleanUrl = currentUrl.split('?')[0];
 
                                                 if (cleanUrl.includes('_thumbnail.jpg')) {
-                                                    // Try .png
-                                                    const next = cleanUrl.replace('_thumbnail.jpg', '.png');
+                                                    // Try /share-images/ first (static images) before .png
+                                                    const next = cleanUrl.replace('_thumbnail.jpg', '').replace('/share-videos/', '/share-images/') + '.jpg';
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                                } else if (cleanUrl.includes('/share-images/')) {
+                                                    // If /share-images/ fails, try .png
+                                                    const next = cleanUrl.replace('/share-images/', '/share-videos/').replace('.jpg', '.png');
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else if (cleanUrl.endsWith('.png')) {
                                                     if (cleanUrl.includes('/share-videos/')) {
