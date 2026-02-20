@@ -273,15 +273,16 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto mb-8 space-y-4">
-            {/* 1. Main Input Area (Always Visible) */}
-            <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm space-y-4">
-                <form onSubmit={handleAnalyze} className="flex gap-2">
-                    <div className="relative flex-1">
+        <div className="w-full max-w-2xl mx-auto mb-8 relative z-10">
+            <div className="bg-gray-900/60 p-4 sm:p-5 rounded-3xl border border-gray-800 backdrop-blur-md shadow-2xl transition-all duration-300">
+
+                {/* 1. URL Input (Always at top) */}
+                <form onSubmit={handleAnalyze} className="flex flex-col sm:flex-row gap-2 mb-3">
+                    <div className="relative flex-1 group">
                         <input
                             type="url"
                             placeholder="GrokのURLを貼り付け / Paste Grok URL ..."
-                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
+                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2.5 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder-gray-500 text-sm shadow-inner"
                             value={url}
                             onChange={(e) => {
                                 let inputUrl = e.target.value;
@@ -300,221 +301,185 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     </div>
                     <button
                         type="submit"
-                        disabled={loading}
-                        className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold transition-all flex items-center gap-2 whitespace-nowrap shadow-md shadow-purple-900/20 active:scale-95 disabled:opacity-50"
+                        disabled={loading || !url}
+                        className="bg-purple-600 hover:bg-purple-500 disabled:bg-gray-800 disabled:text-gray-500 text-white px-6 py-2.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg active:scale-95 text-sm"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} fill="currentColor" />}
+                        {loading ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} fill="currentColor" />}
                         Load
                     </button>
                 </form>
 
-                {/* Prompt and NSFW - Now always visible */}
-                <div className="space-y-4 pt-2 border-t border-gray-800/50">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">
-                            プロンプト・説明 / Prompt / Description
-                        </label>
+                <div className="flex flex-col sm:flex-row gap-4 transition-all duration-500 mt-4 opacity-100">
+
+                    {/* 2. Left Column: Thumbnail Preview */}
+                    <div className="w-full sm:w-[120px] shrink-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                        <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-700/50 shadow-inner group flex flex-col items-center justify-center">
+                            {(!preview && !loading) ? (
+                                <div className="flex flex-col items-center justify-center gap-2 p-2 text-center opacity-50">
+                                    <ImageIcon size={24} className="text-gray-500" />
+                                    <p className="text-[10px] text-gray-400 font-bold leading-tight">URLを入れて<br />Load<br />を押してください</p>
+                                </div>
+                            ) : preview?.imageUrl && !previewImageError ? (
+                                <div className="relative w-full h-full cursor-pointer" onClick={() => window.open(preview.url, '_blank')}>
+                                    <img
+                                        src={preview.imageUrl}
+                                        alt="Thumbnail"
+                                        referrerPolicy="no-referrer"
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        onError={() => {
+                                            console.log("Image load failed, trying fallbacks...");
+                                            const currentUrl = preview.imageUrl;
+                                            const cleanUrl = currentUrl.split('?')[0];
+
+                                            if (cleanUrl.includes('_thumbnail.jpg')) {
+                                                const next = cleanUrl.replace('_thumbnail.jpg', '').replace('/share-videos/', '/share-images/') + '.jpg';
+                                                setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                            } else if (cleanUrl.includes('/share-images/')) {
+                                                const next = cleanUrl.replace('/share-images/', '/share-videos/').replace('.jpg', '.png');
+                                                setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                            } else if (cleanUrl.endsWith('.png')) {
+                                                if (cleanUrl.includes('/share-videos/')) {
+                                                    const next = cleanUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                                } else {
+                                                    setPreviewImageError(true);
+                                                }
+                                            } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
+                                                setPreviewImageError(true);
+                                            } else {
+                                                setPreviewImageError(true);
+                                            }
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100">
+                                        <div className="bg-white/20 p-2 rounded-full backdrop-blur-md border border-white/30">
+                                            <ImageIcon size={16} className="text-white shadow-lg" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : previewImageError && preview ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-2 text-center">
+                                    <Clock size={16} className="text-blue-400 mb-1" />
+                                    <p className="font-bold text-gray-200 text-[10px] mb-2 leading-tight">Preview Pending</p>
+                                    <div className="w-full space-y-1.5 px-1">
+                                        <a
+                                            href={preview.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block w-full text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 py-1.5 rounded-lg text-[9px] font-bold border border-blue-500/20 transition-colors"
+                                        >
+                                            1. 元ページを開く
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
+                                                if (uuidMatch) {
+                                                    const uuid = uuidMatch[1];
+                                                    const resetUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg?t=${Date.now()}`;
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: resetUrl }) : null);
+                                                } else {
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}` }) : null);
+                                                }
+                                                setPreviewImageError(false);
+                                            }}
+                                            className="block w-full text-green-400 bg-green-500/10 hover:bg-green-500/20 py-1.5 rounded-lg text-[9px] font-bold border border-green-500/20 transition-colors"
+                                        >
+                                            2. 再読み込み
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                                    <Loader2 className="animate-spin text-gray-500" size={24} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 3. Right Column / Bottom row: Text Area and Actions */}
+                    <div className="flex-1 flex flex-col pt-1">
                         <textarea
                             value={editablePrompt}
                             onChange={(e) => setEditablePrompt(e.target.value)}
                             placeholder="プロンプトや説明を入力... / Describe the content or paste the prompt... (Optional)"
-                            className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none transition-all placeholder-gray-500 text-sm"
+                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none h-20 sm:h-28 resize-none transition-all placeholder-gray-500 text-sm leading-relaxed shadow-inner scrollbar-thin scrollbar-thumb-gray-700"
                         />
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 bg-gray-800/40 p-2 rounded-lg border border-gray-700/50 w-fit">
-                            <label className="flex items-center gap-2 cursor-pointer group">
+                        {error && <p className="text-red-400 text-xs mt-2 font-medium">{error}</p>}
+
+                        {/* Bottom Toolbar */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-auto">
+                            <label className="flex items-center gap-2 cursor-pointer group hover:bg-red-500/10 px-2 py-1.5 rounded-lg transition-colors ml-1">
                                 <input
                                     type="checkbox"
                                     checked={isNsfw}
                                     onChange={(e) => setIsNsfw(e.target.checked)}
-                                    className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500 focus:ring-offset-gray-900"
+                                    className="w-3.5 h-3.5 rounded bg-gray-800 border-gray-600 text-red-500 focus:ring-red-500 focus:ring-offset-gray-900"
                                 />
-                                <span className={`text-sm font-bold transition-colors ${isNsfw ? 'text-red-400' : 'text-gray-400 group-hover:text-gray-300'}`}>
-                                    NSFW作品として投稿 / Mark as NSFW
+                                <span className="text-xs font-bold text-red-400">
+                                    NSFW
                                 </span>
                             </label>
-                        </div>
 
-                        {/* Reset Button (Visible only when there's some input) */}
-                        {(url || editablePrompt || isNsfw) && !preview && (
-                            <button
-                                onClick={() => {
-                                    setUrl('');
-                                    setEditablePrompt('');
-                                    setIsNsfw(false);
-                                    setError('');
-                                }}
-                                className="text-gray-500 hover:text-gray-300 text-xs flex items-center gap-1 transition-colors"
-                            >
-                                <Trash2 size={12} /> Clear
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {error && <p className="text-red-400 text-sm animate-pulse">{error}</p>}
-            </div>
-
-            {/* 2. Actions & Preview Section (Visible after Load) */}
-            {preview && (
-                <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm animate-in fade-in slide-in-from-top-4">
-                    <div className="flex flex-col md:flex-row gap-6 items-start">
-
-                        {/* Preview Image */}
-                        <div className="w-full md:w-48 shrink-0 space-y-2">
-                            <label className="block text-[10px] font-medium text-gray-500 uppercase tracking-widest">Preview</label>
-                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black border border-gray-700 shadow-xl group">
-                                {preview.imageUrl && !previewImageError ? (
-                                    <div className="relative w-full h-full cursor-pointer" onClick={() => window.open(preview.url, '_blank')}>
-                                        <img
-                                            src={preview.imageUrl}
-                                            alt="Thumbnail"
-                                            referrerPolicy="no-referrer"
-                                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                            onError={() => {
-                                                console.log("Image load failed, trying fallbacks...");
-                                                const currentUrl = preview.imageUrl;
-                                                const cleanUrl = currentUrl.split('?')[0];
-
-                                                if (cleanUrl.includes('_thumbnail.jpg')) {
-                                                    // Try /share-images/ first (static images) before .png
-                                                    const next = cleanUrl.replace('_thumbnail.jpg', '').replace('/share-videos/', '/share-images/') + '.jpg';
-                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
-                                                } else if (cleanUrl.includes('/share-images/')) {
-                                                    // If /share-images/ fails, try .png
-                                                    const next = cleanUrl.replace('/share-images/', '/share-videos/').replace('.jpg', '.png');
-                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
-                                                } else if (cleanUrl.endsWith('.png')) {
-                                                    if (cleanUrl.includes('/share-videos/')) {
-                                                        // Try /images/ UUID.jpg
-                                                        const next = cleanUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
-                                                        setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
-                                                    } else {
-                                                        setPreviewImageError(true);
-                                                    }
-                                                } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
-                                                    // We've tried everything
-                                                    setPreviewImageError(true);
-                                                } else {
-                                                    setPreviewImageError(true);
-                                                }
-                                            }}
-                                        />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100">
-                                            <div className="bg-white/20 p-2 rounded-full backdrop-blur-md border border-white/30">
-                                                <ImageIcon size={20} className="text-white shadow-lg" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : previewImageError ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-3 text-center">
-                                        <div className="flex flex-col gap-2 items-center w-full">
-                                            <div className="text-gray-400 text-[10px] leading-snug mb-1">
-                                                <p className="font-bold text-gray-200 text-xs mb-1 flex items-center justify-center gap-1">
-                                                    <Clock size={12} className="text-blue-400" />
-                                                    Preview Pending
-                                                </p>
-                                                <p className="text-gray-300 font-medium">プレビュー表示準備中</p>
-                                                <p className="text-[9px] opacity-70 mt-1">生成には一度元ページを開く必要があります。</p>
-                                            </div>
-
-                                            <div className="w-full flex flex-col gap-1.5">
-                                                <a
-                                                    href={preview.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-full flex items-center justify-center gap-1.5 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 py-2 rounded-lg text-[10px] font-bold border border-blue-500/20 transition-colors"
-                                                >
-                                                    1. 元ページを開いて生成
-                                                </a>
-                                                <button
-                                                    onClick={() => {
-                                                        // RESET to canonical thumbnail on retry
-                                                        const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
-                                                        if (uuidMatch) {
-                                                            const uuid = uuidMatch[1];
-                                                            const resetUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg?t=${Date.now()}`;
-                                                            setPreview(prev => prev ? ({ ...prev, imageUrl: resetUrl }) : null);
-                                                        } else {
-                                                            setPreview(prev => prev ? ({ ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}` }) : null);
-                                                        }
-                                                        setPreviewImageError(false);
-                                                    }}
-                                                    className="w-full flex items-center justify-center gap-1.5 text-green-400 bg-green-500/10 hover:bg-green-500/20 py-2 rounded-lg text-[10px] font-bold border border-green-500/20 transition-colors"
-                                                >
-                                                    2. プレビューを再読み込み
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-950">
-                                        <Loader2 className="animate-spin text-gray-600" />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex-1 w-full space-y-6 self-stretch flex flex-col justify-center">
-                            <div className="space-y-2">
-                                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                                    {isEditing ? <Edit size={16} className="text-blue-400" /> : <Sparkles size={16} className="text-green-400" />}
-                                    {isEditing ? '投稿を編集 / Editing Post' : '投稿の準備ができました / Ready to Share'}
-                                </h4>
-                                <p className="text-xs text-gray-400 leading-relaxed">
-                                    {isEditing
-                                        ? 'プロンプトやNSFW設定を更新して保存してください。'
-                                        : 'プレビューを確認し、問題なければShareボタンを押して公開してください。'}
-                                </p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-3">
-                                <button
-                                    onClick={isEditing ? handleUpdate : handleShare}
-                                    disabled={loading}
-                                    className={`
-                                        flex-1 min-w-[120px] px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all
-                                        ${isEditing
-                                            ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30 text-white'
-                                            : 'bg-green-600 hover:bg-green-500 shadow-green-900/30 text-white'
-                                        }
-                                        ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
-                                    `}
-                                >
-                                    {loading ? <Loader2 className="animate-spin" /> : isEditing ? <RefreshCw size={18} /> : <Plus size={18} />}
-                                    {isEditing ? 'Update' : 'Share Now'}
-                                </button>
-
-                                {isEditing ? (
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        disabled={loading}
-                                        className="px-6 py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/30 rounded-xl font-bold transition-all flex items-center gap-2"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                ) : (
+                            <div className="flex items-center gap-2 ml-auto">
+                                {!preview && (url || editablePrompt || isNsfw) && (
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setPreview(null);
-                                            setIsEditing(false);
+                                            setUrl('');
+                                            setEditablePrompt('');
+                                            setIsNsfw(false);
+                                            setError('');
                                         }}
-                                        disabled={loading}
-                                        className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold transition-all border border-gray-700 active:scale-95"
+                                        className="text-gray-500 hover:text-gray-300 px-2 py-1 text-xs font-bold flex items-center gap-1 transition-colors"
                                     >
-                                        Cancel
+                                        Clear
                                     </button>
+                                )}
+
+                                {preview && (
+                                    <>
+                                        {isEditing && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDelete}
+                                                disabled={loading}
+                                                className="p-2 bg-red-600/10 hover:bg-red-600 hover:text-white text-red-500 rounded-full transition-all border border-transparent hover:border-red-500 mr-1"
+                                                title="投稿を削除 / Delete Post"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPreview(null); setIsEditing(false); }}
+                                            disabled={loading}
+                                            className="px-4 py-1.5 hover:bg-gray-800 text-gray-400 hover:text-gray-200 rounded-full text-xs font-bold transition-all active:scale-95"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={isEditing ? handleUpdate : handleShare}
+                                            disabled={loading}
+                                            className={`
+                                                px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-1.5 transition-all outline-none shadow-md shadow-black/20
+                                                ${isEditing
+                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                                                    : 'bg-green-600 hover:bg-green-500 text-white'
+                                                }
+                                                ${loading ? 'opacity-50 scale-100' : 'active:scale-95 hover:shadow-lg'}
+                                            `}
+                                        >
+                                            {loading ? <Loader2 className="animate-spin" size={14} /> : null}
+                                            {isEditing ? 'Update' : 'Post'}
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
