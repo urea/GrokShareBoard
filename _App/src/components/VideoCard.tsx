@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye } from 'lucide-react';
+import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
 import CommentSection from './CommentSection';
@@ -31,6 +31,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
     };
 
     const displayImageUrl = getValidImageUrl(post.image_url);
+    const isVideo = displayImageUrl?.includes('_thumbnail.jpg');
     const [imageError, setImageError] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
@@ -100,6 +101,13 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 text-xs p-2 text-center text-balance">
                         Preview Unavailable
+                    </div>
+                )}
+
+                {/* Video Indicator Icon */}
+                {isVideo && (
+                    <div className={`absolute top-2 right-2 bg-black/50 backdrop-blur-sm p-1.5 rounded-full border border-white/10 z-10 shadow-lg pointer-events-none transition-opacity duration-300 ${isHovered && post.video_url && !videoError ? 'opacity-0' : 'opacity-100'}`}>
+                        <Play size={14} className="text-white fill-white opacity-90" />
                     </div>
                 )}
 
