@@ -4,10 +4,19 @@
 import React, { useState, useEffect } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
+import CommentSection from '@/components/CommentSection';
+import { createPortal } from 'react-dom';
+
+function ModalPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -21,6 +30,16 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [activeVideoPostId, setActiveVideoPostId] = useState<string | null>(null);
+  const [activePromptPostId, setActivePromptPostId] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState(false);
+
+  // Swipe handling states
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+
+  const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
+
   const POSTS_PER_PAGE = 24;
   const APP_VERSION = 'v1.5.0';
 
@@ -135,6 +154,102 @@ export default function Home() {
     }
   };
 
+  // Navigate Modal Functions
+  const handleNavigate = async (direction: 1 | -1) => {
+    if (activeVideoPostId) {
+      const currentIndex = posts.findIndex(p => p.id === activeVideoPostId);
+      if (currentIndex === -1) return;
+      const nextIndex = currentIndex + direction;
+      if (nextIndex >= 0 && nextIndex < posts.length) {
+        const nextPost = posts[nextIndex];
+        // Execute the same open logic to get View increment
+        handleOpenVideo(nextPost);
+      }
+    } else if (activePromptPostId) {
+      const currentIndex = posts.findIndex(p => p.id === activePromptPostId);
+      if (currentIndex === -1) return;
+      const nextIndex = currentIndex + direction;
+      if (nextIndex >= 0 && nextIndex < posts.length) {
+        setActivePromptPostId(posts[nextIndex].id);
+      }
+    }
+  };
+
+  // キーボードショートカット (ESCと左右キー)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeVideoPostId) setActiveVideoPostId(null);
+        if (activePromptPostId) setActivePromptPostId(null);
+      } else if (e.key === 'ArrowRight') {
+        handleNavigate(1);
+      } else if (e.key === 'ArrowLeft') {
+        handleNavigate(-1);
+      }
+    };
+
+    if (activeVideoPostId || activePromptPostId) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeVideoPostId, activePromptPostId]);
+
+  // Swipe event handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null); // Reset on start
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+  const onTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    const distance = touchStartX - touchEndX;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNavigate(1); // Swipe left = go to next (right) post
+    } else if (isRightSwipe) {
+      handleNavigate(-1); // Swipe right = go to prev (left) post
+    }
+    // Reset after swipe calculation
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
+  const handleOpenVideo = async (post: Post) => {
+    setVideoError(false);
+    setActiveVideoPostId(post.id);
+
+    // Optimistic update for views in the global list
+    const newViews = (post.views || 0) + 1;
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, views: newViews } : p));
+
+    try {
+      await supabase.rpc('increment_view', { post_id: post.id });
+    } catch (err) {
+      console.error('Failed to increment view:', err);
+      // Revert optimism if failed
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, views: post.views } : p));
+    }
+  };
+
+  const activeVideoPost = posts.find(p => p.id === activeVideoPostId);
+  const activePromptPost = posts.find(p => p.id === activePromptPostId);
+
+  // Helper for generating correct thumbnail string
+  const getValidImageUrl = (url: string | null) => {
+    if (!url) return '/placeholder.png';
+    if (url.includes('imagine-public.x.ai')) {
+      if (url.endsWith('_thumbnail.jpg') || url.endsWith('.png') || url.endsWith('.jpg')) return url;
+      return url.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
+    }
+    return url;
+  };
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
@@ -346,6 +461,8 @@ export default function Home() {
                   onUpdate={(updatedPost) => {
                     setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
                   }}
+                  onOpenVideo={() => handleOpenVideo(post)}
+                  onOpenDetails={() => setActivePromptPostId(post.id)}
                 />
               </div>
             ))
@@ -375,6 +492,188 @@ export default function Home() {
           ) : null}
         </div>
       </main>
+
+      {/* Global Modals */}
+
+      {/* Full Prompt / Comment Modal */}
+      {activePromptPost && (() => {
+        const currentIndex = posts.findIndex(p => p.id === activePromptPostId);
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex < posts.length - 1;
+        return (
+          <ModalPortal>
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm group"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActivePromptPostId(null);
+              }}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              {hasPrev && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNavigate(-1); }}
+                  className="absolute left-2 md:left-10 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-2 z-[10010] scale-75 md:scale-100"
+                >
+                  <ChevronLeft size={36} />
+                </button>
+              )}
+
+              <div
+                className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="absolute top-3 right-3 flex gap-2 items-center">
+                  <a
+                    href={activePromptPost.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={async () => {
+                      try {
+                        await supabase.rpc('increment_click', { post_id: activePromptPost.id });
+                        // Optionally update local state for clicks here
+                      } catch (err) {
+                        console.error('Failed to increment click:', err);
+                      }
+                    }}
+                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
+                  >
+                    <ExternalLink size={14} /> Grokで開く
+                  </a>
+                  <button
+                    onClick={() => {
+                      if (!activePromptPost.prompt) return;
+                      navigator.clipboard.writeText(activePromptPost.prompt);
+                      const btn = document.getElementById('copy-btn-' + activePromptPost.id);
+                      if (btn) {
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
+                        setTimeout(() => {
+                          btn.innerHTML = originalText;
+                        }, 2000);
+                      }
+                    }}
+                    id={`copy-btn-${activePromptPost.id}`}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
+                  >
+                    <Copy size={14} /> Copy
+                  </button>
+                  <button
+                    onClick={() => setActivePromptPostId(null)}
+                    className="text-gray-400 hover:text-white ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
+                <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+                  {activePromptPost.prompt || <span className="text-gray-500 italic">No prompt provided.</span>}
+                </p>
+
+                {/* Comment Section (Integrated in Modal) */}
+                <CommentSection postId={activePromptPost.id} isAdmin={isAdmin} />
+              </div>
+
+              {hasNext && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNavigate(1); }}
+                  className="absolute right-2 md:right-10 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-2 z-[10010] scale-75 md:scale-100"
+                >
+                  <ChevronRight size={36} />
+                </button>
+              )}
+            </div>
+          </ModalPortal>
+        );
+      })()}
+
+      {/* Video / Full Image Preview Modal */}
+      {activeVideoPost && (() => {
+        const currentIndex = posts.findIndex(p => p.id === activeVideoPostId);
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex < posts.length - 1;
+
+        return (
+          <ModalPortal>
+            <div
+              className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md group"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveVideoPostId(null);
+              }}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveVideoPostId(null);
+                }}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-[10010] p-2 bg-black/50 rounded-full"
+              >
+                ✕ Close
+              </button>
+
+              {hasPrev && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNavigate(-1); }}
+                  className="absolute left-1 md:left-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-1.5 md:p-4 z-[10010] opacity-80 md:opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronLeft className="w-8 h-8 md:w-12 md:h-12" />
+                </button>
+              )}
+
+              <div
+                className="relative flex items-center justify-center w-full max-w-5xl max-h-[90vh] p-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {activeVideoPost.video_url && !videoError ? (
+                  <video
+                    key={`video-${activeVideoPost.id}`}
+                    src={activeVideoPost.video_url}
+                    autoPlay
+                    controls
+                    className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black border border-gray-800"
+                    onError={() => {
+                      console.error("Main video playback failed");
+                      setVideoError(true);
+                    }}
+                  />
+                ) : (
+                  <img
+                    key={`img-${activeVideoPost.id}`}
+                    src={activeVideoPost.image_url ? activeVideoPost.image_url.replace('_thumbnail.jpg', '.jpg') : getValidImageUrl(activeVideoPost.image_url)}
+                    alt={activeVideoPost.prompt || 'Grok generation full image'}
+                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black border border-gray-800"
+                    onError={(e) => {
+                      const displayImage = getValidImageUrl(activeVideoPost.image_url);
+                      const target = e.currentTarget;
+                      if (target.src.endsWith('.jpg') && !target.src.includes('_thumbnail')) {
+                        target.src = target.src.replace('.jpg', '.png');
+                      } else if (target.src !== displayImage) {
+                        target.src = displayImage;
+                      }
+                    }}
+                  />
+                )}
+              </div>
+
+              {hasNext && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNavigate(1); }}
+                  className="absolute right-1 md:right-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-1.5 md:p-4 z-[10010] opacity-80 md:opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronRight className="w-8 h-8 md:w-12 md:h-12" />
+                </button>
+              )}
+
+            </div>
+          </ModalPortal>
+        );
+      })()}
 
       <NsfwWarningModal
         isOpen={showNsfwConfirm}

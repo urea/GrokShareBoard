@@ -14,9 +14,11 @@ interface VideoCardProps {
     overlayStyle?: boolean;
     isAdmin?: boolean;
     onUpdate?: (post: Post) => void;
+    onOpenVideo?: () => void;
+    onOpenDetails?: () => void;
 }
 
-export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate }: VideoCardProps) {
+export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate, onOpenVideo, onOpenDetails }: VideoCardProps) {
     // Helper to enforce the correct thumbnail pattern [UUID]_thumbnail.jpg
     const getValidImageUrl = (url: string | null) => {
         if (!url) return '/placeholder.png';
@@ -32,43 +34,10 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
     const [imageError, setImageError] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [showFullPrompt, setShowFullPrompt] = useState(false);
-    const [showVideoModal, setShowVideoModal] = useState(false);
-    const [localViews, setLocalViews] = useState<number>(post.views || 0);
 
-    // ESCキーでモーダルを閉じる
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (showVideoModal) setShowVideoModal(false);
-                if (showFullPrompt) setShowFullPrompt(false);
-            }
-        };
-
-        if (showVideoModal || showFullPrompt) {
-            window.addEventListener('keydown', handleKeyDown);
-        }
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [showVideoModal, showFullPrompt]);
-
-    const handleLinkClick = async () => {
-        // Instead of opening the Grok URL, open the video/image modal
-        setShowVideoModal(true);
-
-        // Optimistic UI update for views
-        setLocalViews(prev => prev + 1);
-
-        // Call RPC to increment view count in DB
-        try {
-            await supabase.rpc('increment_view', { post_id: post.id });
-        } catch (err) {
-            console.error('Failed to increment view:', err);
-            // Revert on failure (optional, but good UX)
-            setLocalViews(prev => Math.max(0, prev - 1));
-        }
+    const handleLinkClick = () => {
+        // Open the video/image modal managed by parent page
+        if (onOpenVideo) onOpenVideo();
     };
 
     const handleAdminNsfwToggle = async (e: React.MouseEvent) => {
@@ -166,7 +135,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setShowFullPrompt(true);
+                                            if (onOpenDetails) onOpenDetails();
                                         }}
                                         className="h-full flex items-center justify-center text-[10px] text-blue-300 hover:text-blue-200 underline bg-black/50 px-2 rounded border border-transparent transition-colors"
                                     >
@@ -198,7 +167,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     <div className="w-[1px] h-3 bg-white/10" />
                                     <div className="flex items-center gap-1" title="Views">
                                         <Eye size={10} />
-                                        <span>{localViews}</span>
+                                        <span>{post.views || 0}</span>
                                     </div>
                                     <div className="w-[1px] h-3 bg-white/10" />
                                     <div className="flex items-center gap-1" title="Grok Opens">
@@ -222,129 +191,6 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                     </div>
                 )}
             </div>
-
-            {/* Full Prompt Overlay Modal */}
-            {showFullPrompt && (
-                <ModalPortal>
-                    <div
-                        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowFullPrompt(false);
-                        }}
-                    >
-                        <div
-                            className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="absolute top-3 right-3 flex gap-2 items-center">
-                                <a
-                                    href={post.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={async () => {
-                                        try {
-                                            await supabase.rpc('increment_click', { post_id: post.id });
-                                        } catch (err) {
-                                            console.error('Failed to increment click:', err);
-                                        }
-                                    }}
-                                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
-                                >
-                                    <ExternalLink size={14} /> Grokで開く
-                                </a>
-                                <button
-                                    onClick={() => {
-                                        if (!post.prompt) return;
-                                        navigator.clipboard.writeText(post.prompt);
-                                        const btn = document.getElementById('copy-btn-' + post.id);
-                                        if (btn) {
-                                            const originalText = btn.innerHTML;
-                                            btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
-                                            setTimeout(() => {
-                                                btn.innerHTML = originalText;
-                                            }, 2000);
-                                        }
-                                    }}
-                                    id={`copy-btn-${post.id}`}
-                                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
-                                >
-                                    <Copy size={14} /> Copy
-                                </button>
-                                <button
-                                    onClick={() => setShowFullPrompt(false)}
-                                    className="text-gray-400 hover:text-white ml-2"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
-                            <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
-                                {post.prompt || <span className="text-gray-500 italic">No prompt provided.</span>}
-                            </p>
-
-                            {/* Comment Section (Integrated in Modal) */}
-                            <CommentSection postId={post.id} isAdmin={isAdmin} />
-                        </div>
-                    </div>
-                </ModalPortal>
-            )}
-
-            {/* Video / Full Image Preview Modal */}
-            {showVideoModal && (
-                <ModalPortal>
-                    <div
-                        className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowVideoModal(false);
-                        }}
-                    >
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowVideoModal(false);
-                            }}
-                            className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-[10010] p-2 bg-black/50 rounded-full"
-                        >
-                            ✕ Close
-                        </button>
-
-                        <div
-                            className="relative flex items-center justify-center w-full max-w-5xl max-h-[90vh] p-4"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {post.video_url && !videoError ? (
-                                <video
-                                    src={post.video_url}
-                                    autoPlay
-                                    controls
-                                    className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black border border-gray-800"
-                                    onError={() => {
-                                        console.error("Main video playback failed");
-                                        setVideoError(true);
-                                    }}
-                                />
-                            ) : (
-                                <img
-                                    src={post.image_url ? post.image_url.replace('_thumbnail.jpg', '.jpg') : displayImageUrl}
-                                    alt={post.prompt || 'Grok generation full image'}
-                                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black border border-gray-800"
-                                    onError={(e) => {
-                                        // Simple fallback mechanism for modal
-                                        const target = e.currentTarget;
-                                        if (target.src.endsWith('.jpg') && !target.src.includes('_thumbnail')) {
-                                            target.src = target.src.replace('.jpg', '.png');
-                                        } else if (target.src !== displayImageUrl) {
-                                            target.src = displayImageUrl;
-                                        }
-                                    }}
-                                />
-                            )}
-                        </div>
-                    </div>
-                </ModalPortal>
-            )}
 
             {/* Bottom Info Area */}
             {!overlayStyle && (
@@ -381,7 +227,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             </a>
                             <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Views">
                                 <Eye size={compact ? 10 : 12} className="text-gray-400" />
-                                <span className="font-medium text-gray-300">{localViews}</span>
+                                <span className="font-medium text-gray-300">{post.views || 0}</span>
                             </div>
                             <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Grok Opens">
                                 <MousePointer2 size={compact ? 10 : 12} className="text-gray-400" />
@@ -393,11 +239,4 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
             )}
         </motion.div>
     );
-}
-
-function ModalPortal({ children }: { children: React.ReactNode }) {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    if (!mounted) return null;
-    return createPortal(children, document.body);
 }
