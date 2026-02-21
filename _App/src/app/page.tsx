@@ -15,14 +15,14 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'comment'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'views' | 'comment'>('newest');
   const [showNsfw, setShowNsfw] = useState(false);
   const [showNsfwConfirm, setShowNsfwConfirm] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.4.12';
+  const APP_VERSION = 'v1.5.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -38,6 +38,9 @@ export default function Home() {
         query = query.order('created_at', { ascending: false });
       } else if (sortBy === 'popular') {
         query = query.order('clicks', { ascending: false });
+      } else if (sortBy === 'views') {
+        query = query.order('views', { ascending: false })
+          .order('created_at', { ascending: false });
       } else if (sortBy === 'comment') {
         // Sort by last_comment_at (fallback to created_at if null)
         // Note: COALESCE sorting might require a raw order string or careful use of .order()
@@ -114,7 +117,7 @@ export default function Home() {
     fetchPosts(nextPage, false);
   };
 
-  const handleSortChange = (newSort: 'newest' | 'popular' | 'comment') => {
+  const handleSortChange = (newSort: 'newest' | 'popular' | 'views' | 'comment') => {
     if (newSort === sortBy) return;
     setSortBy(newSort);
   };
@@ -294,6 +297,12 @@ export default function Home() {
               className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'popular' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
             >
               人気 / Popular
+            </button>
+            <button
+              onClick={() => handleSortChange('views')}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded text-xs font-bold transition-all ${sortBy === 'views' ? 'bg-[#0099cc] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              視聴回数 / Viewed
             </button>
             <button
               onClick={() => handleSortChange('comment')}
