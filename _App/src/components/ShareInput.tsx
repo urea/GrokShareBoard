@@ -261,7 +261,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             <div className="bg-gray-900/60 p-4 sm:p-5 rounded-3xl border border-gray-800 backdrop-blur-md shadow-2xl transition-all duration-300">
 
                 {/* 1. URL Input (Always at top) */}
-                <form onSubmit={handleAnalyze} className="flex flex-col sm:flex-row gap-2 mb-3">
+                <form onSubmit={handleAnalyze} className="flex flex-row gap-2 mb-3">
                     <div className="relative flex-1 group">
                         <input
                             type="url"
@@ -293,10 +293,10 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     </button>
                 </form>
 
-                <div className="flex flex-col sm:flex-row gap-4 transition-all duration-500 mt-4 opacity-100">
+                <div className="flex flex-row gap-3 sm:gap-4 transition-all duration-500 mt-4 opacity-100">
 
                     {/* 2. Left Column: Thumbnail Preview */}
-                    <div className="w-full sm:w-[120px] shrink-0 animate-in fade-in slide-in-from-left-4 duration-300">
+                    <div className="w-[80px] sm:w-[120px] shrink-0 animate-in fade-in slide-in-from-left-4 duration-300">
                         <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-700/50 shadow-inner group flex flex-col items-center justify-center">
                             {(!preview && !loading) ? (
                                 <div className="flex flex-col items-center justify-center gap-2 p-2 text-center opacity-50">

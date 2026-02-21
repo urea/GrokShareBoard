@@ -138,16 +138,16 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     {post.prompt}
                                 </p>
                             )}
-                            <div className="flex items-center justify-between mt-1">
-                                <div className="flex gap-2 items-center h-6">
+                            <div className="flex flex-wrap items-center justify-between gap-1 mt-1">
+                                <div className="flex gap-1.5 items-center h-6">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (onOpenDetails) onOpenDetails();
                                         }}
-                                        className="h-full flex items-center justify-center text-[10px] text-blue-300 hover:text-blue-200 underline bg-black/50 px-2 rounded border border-transparent transition-colors"
+                                        className="h-full flex items-center justify-center text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
                                     >
-                                        詳細・コメント / Details
+                                        <MessageSquare size={10} className="mr-1" /> 詳細
                                     </button>
                                     <a
                                         href={post.url}

@@ -41,7 +41,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.5.4';
+  const APP_VERSION = 'v1.5.5';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -522,52 +522,52 @@ export default function Home() {
               )}
 
               <div
-                className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
+                className="bg-gray-900 border border-gray-700 rounded-xl p-5 sm:p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl relative"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="absolute top-3 right-3 flex gap-2 items-center">
-                  <a
-                    href={activePromptPost.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={async () => {
-                      try {
-                        await supabase.rpc('increment_click', { post_id: activePromptPost.id });
-                        // Optionally update local state for clicks here
-                      } catch (err) {
-                        console.error('Failed to increment click:', err);
-                      }
-                    }}
-                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
-                  >
-                    <ExternalLink size={14} /> Grokで開く
-                  </a>
-                  <button
-                    onClick={() => {
-                      if (!activePromptPost.prompt) return;
-                      navigator.clipboard.writeText(activePromptPost.prompt);
-                      const btn = document.getElementById('copy-btn-' + activePromptPost.id);
-                      if (btn) {
-                        const originalText = btn.innerHTML;
-                        btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
-                        setTimeout(() => {
-                          btn.innerHTML = originalText;
-                        }, 2000);
-                      }
-                    }}
-                    id={`copy-btn-${activePromptPost.id}`}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded border border-gray-700 transition-colors"
-                  >
-                    <Copy size={14} /> Copy
-                  </button>
-                  <button
-                    onClick={() => setActivePromptPostId(null)}
-                    className="text-gray-400 hover:text-white ml-2"
-                  >
-                    ✕
-                  </button>
+                {/* Header Section */}
+                <div className="flex justify-between items-start gap-2 mb-4 shrink-0">
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight pt-1">
+                    プロンプト・説明<br className="sm:hidden" /><span className="hidden sm:inline"> / Prompt</span>
+                  </h3>
+                  <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2 items-center">
+                    <a
+                      href={activePromptPost.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={async () => {
+                        try {
+                          await supabase.rpc('increment_click', { post_id: activePromptPost.id });
+                        } catch (err) { }
+                      }}
+                      className="flex items-center gap-1 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap"
+                    >
+                      <ExternalLink size={12} className="sm:w-3.5 sm:h-3.5" /> Grok
+                    </a>
+                    <button
+                      onClick={() => {
+                        if (!activePromptPost.prompt) return;
+                        navigator.clipboard.writeText(activePromptPost.prompt);
+                        const btn = document.getElementById('copy-btn-' + activePromptPost.id);
+                        if (btn) {
+                          const originalText = btn.innerHTML;
+                          btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> OK</span>';
+                          setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+                        }
+                      }}
+                      id={`copy-btn-${activePromptPost.id}`}
+                      className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap"
+                    >
+                      <Copy size={12} className="sm:w-3.5 sm:h-3.5" /> Copy
+                    </button>
+                    <button
+                      onClick={() => setActivePromptPostId(null)}
+                      className="text-gray-400 hover:text-white p-1 ml-1 sm:ml-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <h3 className="text-sm font-bold text-gray-400 mb-2">プロンプト・説明 / Prompt / Description</h3>
                 <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
                   {activePromptPost.prompt || <span className="text-gray-500 italic">No prompt provided.</span>}
                 </p>
