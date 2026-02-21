@@ -160,15 +160,18 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 }
             }
 
+            const cleanImageUrl = finalImageUrl.split('?')[0];
+            const cleanPreviewUrl = preview.url.split('?')[0];
+
             const { data: updatedData, error: updateError } = await supabase
                 .from('posts')
                 .update({
                     prompt: editablePrompt,
-                    image_url: finalImageUrl,
+                    image_url: cleanImageUrl,
                     nsfw: isNsfw,
                     // user_id: editableUserId.trim() || null, // Abolished: Do not update user_id
                 })
-                .eq('url', preview.url)
+                .eq('url', cleanPreviewUrl)
                 .select('id');
 
             if (updateError) throw updateError;
@@ -237,16 +240,19 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
             const grokUuid = uuidMatch ? uuidMatch[1] : undefined;
 
+            const cleanImageUrl = finalImageUrl.split('?')[0];
+            const cleanPreviewUrl = preview.url.split('?')[0];
+
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert([
                     {
                         id: grokUuid, // EXPLICITLY SET THE ID TO GROK UUID
-                        url: preview.url,
+                        url: cleanPreviewUrl,
                         prompt: editablePrompt,
                         user_id: clientId, // Use anonymous Client ID
-                        video_url: preview.videoUrl,
-                        image_url: finalImageUrl,
+                        video_url: preview.videoUrl ? preview.videoUrl.split('?')[0] : '',
+                        image_url: cleanImageUrl,
                         site_name: preview.siteName,
                         title: preview.title,
                         width: 0,
