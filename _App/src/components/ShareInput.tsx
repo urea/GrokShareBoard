@@ -74,9 +74,12 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     dbImageUrl = dbImageUrl.replace(/(\.mp4|\.png|\.jpg)$/, '') + '_thumbnail.jpg';
                 }
 
+                // Unconditionally set video_url to the predictable URL format if missing (Let UI handle 404s)
+                const currentVideoUrl = existingPost.video_url || `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
+
                 setPreview({
                     url: existingPost.url,
-                    videoUrl: existingPost.video_url || '',
+                    videoUrl: currentVideoUrl,
                     imageUrl: dbImageUrl,
                     siteName: existingPost.site_name || 'Grok',
                     title: existingPost.title || 'Grok Creation',
@@ -96,36 +99,11 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
             const imageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg`;
 
-            // Detect if video actually exists before setting it in preview
-            // (Uses a temporary video element to check availability)
-            let detectedVideoUrl = '';
-            let detectedImageUrl = imageUrl;
-
-            try {
-                const checkVideo = () => new Promise<string>((resolve) => {
-                    const v = document.createElement('video');
-                    v.preload = 'metadata';
-                    v.src = videoUrl;
-                    v.onloadedmetadata = () => resolve(videoUrl);
-                    v.onerror = () => resolve('');
-                    // Timeout after 3 seconds to avoid hanging
-                    setTimeout(() => resolve(''), 3000);
-                });
-
-                detectedVideoUrl = await checkVideo();
-
-                // If it's not a video, it might be a static image under /share-images/
-                if (!detectedVideoUrl) {
-                    detectedImageUrl = `https://imagine-public.x.ai/imagine-public/share-images/${uuid}.jpg`;
-                }
-            } catch (e) {
-                console.warn("Media detection failed, defaulting to thumbnail.");
-            }
-
+            // Unconditionally set the expected URLs. (Real-time 404 detection is handled by the UI tags)
             const mockPreview: PreviewData = {
                 url: url,
-                videoUrl: detectedVideoUrl,
-                imageUrl: detectedImageUrl,
+                videoUrl: videoUrl,
+                imageUrl: imageUrl,
                 siteName: 'Grok',
                 title: 'Grok Creation',
                 description: '',
