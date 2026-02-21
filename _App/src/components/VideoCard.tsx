@@ -36,6 +36,24 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
     const [showVideoModal, setShowVideoModal] = useState(false);
     const [localViews, setLocalViews] = useState<number>(post.views || 0);
 
+    // ESCキーでモーダルを閉じる
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (showVideoModal) setShowVideoModal(false);
+                if (showFullPrompt) setShowFullPrompt(false);
+            }
+        };
+
+        if (showVideoModal || showFullPrompt) {
+            window.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [showVideoModal, showFullPrompt]);
+
     const handleLinkClick = async () => {
         // Instead of opening the Grok URL, open the video/image modal
         setShowVideoModal(true);
@@ -143,14 +161,14 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     {post.prompt}
                                 </p>
                             )}
-                            <div className="flex items-center justify-between">
-                                <div className="flex gap-2">
+                            <div className="flex items-center justify-between mt-1">
+                                <div className="flex gap-2 items-center h-6">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setShowFullPrompt(true);
                                         }}
-                                        className="text-[10px] text-blue-300 hover:text-blue-200 underline cursor-pointer bg-black/50 px-1.5 py-0.5 rounded inline-block transition-colors"
+                                        className="h-full flex items-center justify-center text-[10px] text-blue-300 hover:text-blue-200 underline bg-black/50 px-2 rounded border border-transparent transition-colors"
                                     >
                                         詳細・コメント / Details
                                     </button>
@@ -166,23 +184,23 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                                 console.error('Failed to increment click:', err);
                                             }
                                         }}
-                                        className="text-[10px] text-gray-300 hover:text-white flex items-center gap-1 bg-black/50 px-1.5 py-0.5 rounded border border-gray-600 transition-colors"
+                                        className="h-full flex items-center gap-1 text-[10px] text-gray-300 hover:text-white bg-black/50 px-2 rounded border border-gray-600 transition-colors"
                                         title="Open in Grok"
                                     >
                                         <ExternalLink size={10} /> Grok
                                     </a>
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 shadow-inner">
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 bg-black/40 px-2 h-6 rounded-full border border-white/10 shadow-inner">
                                     <div className="flex items-center gap-1" title="Comments">
                                         <MessageSquare size={10} />
                                         <span>{post.comment_count || 0}</span>
                                     </div>
-                                    <div className="w-[1px] h-2 bg-white/10" />
+                                    <div className="w-[1px] h-3 bg-white/10" />
                                     <div className="flex items-center gap-1" title="Views">
                                         <Eye size={10} />
                                         <span>{localViews}</span>
                                     </div>
-                                    <div className="w-[1px] h-2 bg-white/10" />
+                                    <div className="w-[1px] h-3 bg-white/10" />
                                     <div className="flex items-center gap-1" title="Grok Opens">
                                         <MousePointer2 size={10} />
                                         <span>{post.clicks || 0}</span>
@@ -191,7 +209,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                 {isAdmin && (
                                     <button
                                         onClick={handleAdminNsfwToggle}
-                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-colors ${post.nsfw
+                                        className={`h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border transition-colors ml-1 ${post.nsfw
                                             ? 'bg-red-600 border-red-400 text-white'
                                             : 'bg-gray-700 border-gray-500 text-gray-300 hover:bg-gray-600'
                                             }`}
