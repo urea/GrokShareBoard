@@ -146,6 +146,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 .update({
                     prompt: editablePrompt,
                     image_url: cleanImageUrl,
+                    video_url: preview.videoUrl ? preview.videoUrl.split('?')[0] : '',
                     nsfw: isNsfw,
                     // user_id: editableUserId.trim() || null, // Abolished: Do not update user_id
                 })
