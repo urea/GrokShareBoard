@@ -42,7 +42,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.5.8';
+  const APP_VERSION = 'v1.5.9';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -195,6 +195,34 @@ export default function Home() {
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeVideoPostId, activePromptPostId]);
+
+  // ブラウザの戻るボタン対応 (History API)
+  useEffect(() => {
+    const handlePopState = () => {
+      // 戻るボタンが押されたらすべてのモーダルを閉じる
+      setActiveVideoPostId(null);
+      setActivePromptPostId(null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // モーダルが開いた時に履歴を追加
+    if (activeVideoPostId || activePromptPostId) {
+      const hash = activeVideoPostId ? '#video' : '#prompt';
+      if (window.location.hash !== hash) {
+        window.history.pushState({ modal: true }, '', hash);
+      }
+    } else {
+      // モーダルが閉じていて、かつハッシュが残っている場合は履歴を正常化（戻るボタン以外で閉じた場合）
+      if (window.location.hash === '#video' || window.location.hash === '#prompt') {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
     };
   }, [activeVideoPostId, activePromptPostId]);
 
