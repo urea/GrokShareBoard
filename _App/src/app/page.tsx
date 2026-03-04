@@ -8,6 +8,7 @@ import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
+import AffiliateBanner from '@/components/AffiliateBanner';
 import CommentSection from '@/components/CommentSection';
 import { createPortal } from 'react-dom';
 
@@ -41,7 +42,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.5.7';
+  const APP_VERSION = 'v1.5.8';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -427,13 +428,8 @@ export default function Home() {
           </details>
         </div>
 
-        {/* Minimal Support Link */}
-        <div className="mb-4 px-3 py-1.5 border-l-2 border-[#0099cc] bg-blue-900/5 text-[11px] text-gray-400">
-          <p className="leading-relaxed">
-            Grok Share Boardは皆様の投稿で支えられています。不具合報告や要望は <a href="https://note.com/limber_lynx1258/n/n700edc6393f1" target="_blank" rel="noopener noreferrer" className="text-[#0099cc] hover:underline font-bold inline-flex items-center gap-0.5">公式noteのコメント欄<ExternalLink size={10} /></a> へ。
-            サーバー維持のご支援は、リンク先（note）の最下部にあるチップボタンよりお願いいたします。
-          </p>
-        </div>
+        {/* Affiliate Advertising & Support Banner */}
+        <AffiliateBanner />
 
         {/* Search & Sort Bar */}
         <div className="mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
