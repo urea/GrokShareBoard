@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
@@ -41,7 +41,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.5.6';
+  const APP_VERSION = 'v1.5.7';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -302,6 +302,17 @@ export default function Home() {
             <div className="h-4 w-[1px] bg-white/20 mx-1" />
 
             <a
+              href="https://note.com/limber_lynx1258/n/n700edc6393f1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
+              title="フィードバック・運営支援 (note)"
+            >
+              <LifeBuoy size={20} className="text-white/60" />
+              <span className="hidden lg:inline text-xs font-medium">Feedback</span>
+            </a>
+            <div className="h-4 w-[1px] bg-white/20 mx-1" />
+            <a
               href="https://github.com/urea/GrokShareBoard/blob/main/README.md"
               target="_blank"
               rel="noopener noreferrer"
@@ -392,9 +403,36 @@ export default function Home() {
                     <span className="opacity-70 text-[10px] ml-2">(To edit or delete, re-enter the URL and click "Load".)</span>
                   </p>
                 </div>
+
+                <div className="bg-gray-800/40 border border-gray-700 p-3 rounded text-gray-300 mt-4">
+                  <p className="font-bold text-gray-200 mb-1 flex items-center gap-2">
+                    <LifeBuoy size={14} className="text-[#0099cc]" />
+                    フィードバック・運営支援 / Feedback & Support
+                  </p>
+                  <p className="text-xs leading-relaxed">
+                    不具合の報告、新機能のご要望、および運営維持費（サーバー代）へのご支援は note にて一括して受け付けております。
+                    <br />
+                    <a
+                      href="https://note.com/limber_lynx1258/n/n700edc6393f1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-2 text-[#0099cc] hover:text-[#00aadd] transition-colors font-bold"
+                    >
+                      公式フィードバック・支援窓口 (note) ➔
+                    </a>
+                  </p>
+                </div>
               </section>
             </div>
           </details>
+        </div>
+
+        {/* Minimal Support Link */}
+        <div className="mb-4 px-3 py-1.5 border-l-2 border-[#0099cc] bg-blue-900/5 text-[11px] text-gray-400">
+          <p className="leading-relaxed">
+            Grok Share Boardは皆様の投稿で支えられています。不具合報告や要望は <a href="https://note.com/limber_lynx1258/n/n700edc6393f1" target="_blank" rel="noopener noreferrer" className="text-[#0099cc] hover:underline font-bold inline-flex items-center gap-0.5">公式noteのコメント欄<ExternalLink size={10} /></a> へ。
+            サーバー維持のご支援は、リンク先（note）の最下部にあるチップボタンよりお願いいたします。
+          </p>
         </div>
 
         {/* Search & Sort Bar */}
@@ -680,6 +718,35 @@ export default function Home() {
         onClose={() => setShowNsfwConfirm(false)}
         onConfirm={() => setShowNsfw(true)}
       />
+
+      {/* Basic Footer */}
+      <footer className="border-t border-gray-800 bg-[#1a1a1a] py-8 text-center">
+        <div className="container mx-auto px-4">
+          <p className="text-gray-500 text-xs mb-4">
+            &copy; 2026 Grok Share Board.
+            <span className="mx-2">|</span>
+            xAI Grok Imagine Curation Platform.
+          </p>
+          <div className="flex justify-center gap-6">
+            <a
+              href="https://note.com/limber_lynx1258/n/n700edc6393f1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gray-300 transition-colors text-xs flex items-center gap-1"
+            >
+              <LifeBuoy size={14} /> フィードバック・運営支援
+            </a>
+            <a
+              href="https://github.com/urea/GrokShareBoard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors text-xs"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
