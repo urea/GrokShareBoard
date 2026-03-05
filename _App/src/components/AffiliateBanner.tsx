@@ -2,35 +2,22 @@ import React from 'react';
 import { LifeBuoy, ExternalLink } from 'lucide-react';
 
 const AffiliateBanner: React.FC = () => {
-    const widgetContainerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        // Set global parameter function required by the widget
-        (window as any).MafRakutenWidgetParam = function () {
-            return { size: '468x160', design: 'slide', recommend: 'on', auto_mode: 'on', a_id: '5410287', border: 'off' };
-        };
-
-        const loadWidget = () => {
-            if (widgetContainerRef.current) {
-                // Clear and create temp container for the script to execute
-                widgetContainerRef.current.innerHTML = '';
-                const script = document.createElement('script');
-                script.type = 'text/javascript';
-                script.src = 'https://dn.msmstatic.com/site/rakuten/widget.js';
-                // widget.js uses document.write in some cases, which might fail after load.
-                // However, Japanese ASP widgets often expect to be loaded exactly where they are.
-                widgetContainerRef.current.appendChild(script);
-            }
-        };
-
-        // Delay slightly to ensure ref is definitely ready and SSR/Hydration has settled
-        const timer = setTimeout(loadWidget, 500);
-
-        return () => {
-            clearTimeout(timer);
-            delete (window as any).MafRakutenWidgetParam;
-        };
-    }, []);
+    // Iframe inside srcDoc is the most reliable way for legacy ad scripts in React
+    const adHtml = `
+        <html>
+            <head>
+                <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; }</style>
+            </head>
+            <body>
+                <script type="text/javascript">
+                    window.MafRakutenWidgetParam = function() {
+                        return { size:'468x160', design:'slide', recommend:'on', auto_mode:'on', a_id:'5410287', border:'off' };
+                    };
+                </script>
+                <script type="text/javascript" src="https://dn.msmstatic.com/site/rakuten/widget.js"></script>
+            </body>
+        </html>
+    `;
 
     return (
         <div className="mb-6 bg-[#252525]/30 border border-gray-800 rounded-md overflow-hidden shadow-sm">
@@ -61,12 +48,17 @@ const AffiliateBanner: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Affiliate Widget Area */}
-                <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px]">
-                    <div ref={widgetContainerRef} className="relative w-full flex justify-center overflow-hidden">
-                        {/* Widget will be injected here */}
-                        <div className="text-[10px] text-gray-400 animate-pulse">Loading items...</div>
-                    </div>
+                {/* Affiliate Widget Area (Iframe Sandbox) */}
+                <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px] overflow-hidden">
+                    <iframe
+                        srcDoc={adHtml}
+                        width="100%"
+                        height="160"
+                        frameBorder="0"
+                        scrolling="no"
+                        title="Rakuten Widget"
+                        className="w-full max-w-[468px]"
+                    />
                 </div>
             </div>
         </div>
