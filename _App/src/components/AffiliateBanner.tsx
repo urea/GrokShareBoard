@@ -2,15 +2,12 @@ import React from 'react';
 import { LifeBuoy, ExternalLink } from 'lucide-react';
 
 const AffiliateBanner: React.FC = () => {
-    // Iframe inside srcDoc is the most reliable way for legacy ad scripts in React
-    const adHtml = `
+    // Data URI is often more compatible than srcDoc for legacy scripts that use document.write
+    const adContent = `
         <html>
-            <head>
-                <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; }</style>
-            </head>
-            <body>
+            <body style="margin:0;padding:0;text-align:center;overflow:hidden;">
                 <script type="text/javascript">
-                    window.MafRakutenWidgetParam = function() {
+                    var MafRakutenWidgetParam = function() {
                         return { size:'468x160', design:'slide', recommend:'on', auto_mode:'on', a_id:'5410287', border:'off' };
                     };
                 </script>
@@ -18,6 +15,9 @@ const AffiliateBanner: React.FC = () => {
             </body>
         </html>
     `;
+
+    // Encode the HTML content to safe data URL
+    const adDataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(adContent)}`;
 
     return (
         <div className="mb-6 bg-[#252525]/30 border border-gray-800 rounded-md overflow-hidden shadow-sm">
@@ -48,10 +48,10 @@ const AffiliateBanner: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Affiliate Widget Area (Iframe Sandbox) */}
+                {/* Affiliate Widget Area (Data URL) */}
                 <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px] overflow-hidden">
                     <iframe
-                        srcDoc={adHtml}
+                        src={adDataUrl}
                         width="100%"
                         height="160"
                         frameBorder="0"
