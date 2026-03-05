@@ -42,7 +42,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.5.9';
+  const APP_VERSION = 'v1.6.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -692,7 +692,8 @@ export default function Home() {
                 className="relative flex items-center justify-center w-full max-w-5xl max-h-[90vh] p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                {activeVideoPost.video_url && !videoError ? (
+                {/* Only show video if it's explicitly a video and no error has occurred */}
+                {activeVideoPost.video_url && activeVideoPost.video_url.includes('.mp4') && !videoError ? (
                   <video
                     key={`video-${activeVideoPost.id}`}
                     src={activeVideoPost.video_url}
@@ -700,7 +701,6 @@ export default function Home() {
                     controls
                     className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black border border-gray-800"
                     onError={() => {
-                      console.error("Main video playback failed");
                       setVideoError(true);
                     }}
                   />
