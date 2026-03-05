@@ -42,7 +42,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.6.4';
+  const APP_VERSION = 'v1.6.5';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -746,6 +746,14 @@ export default function Home() {
       {/* Basic Footer */}
       <footer className="border-t border-gray-800 bg-[#1a1a1a] py-8 text-center">
         <div className="container mx-auto px-4">
+          <div className="mb-4 space-y-1">
+            <p className="text-gray-500 text-[10px]">
+              Amazonのアソシエイトとして、Grok Share Boardは適格販売により収入を得ています。
+            </p>
+            <p className="text-gray-500 text-[10px]">
+              当サイトはアフィリエイト広告（Amazonアソシエイト含む）を掲載しています。
+            </p>
+          </div>
           <p className="text-gray-500 text-xs mb-4">
             &copy; 2026 Grok Share Board.
             <span className="mx-2">|</span>
