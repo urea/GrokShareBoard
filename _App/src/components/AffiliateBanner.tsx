@@ -5,28 +5,29 @@ const AffiliateBanner: React.FC = () => {
     const widgetContainerRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
-        // Clean up previous scripts if any
-        if (widgetContainerRef.current) {
-            widgetContainerRef.current.innerHTML = '';
-        }
-
         // Set global parameter function required by the widget
         (window as any).MafRakutenWidgetParam = function () {
             return { size: '468x160', design: 'slide', recommend: 'on', auto_mode: 'on', a_id: '5410287', border: 'off' };
         };
 
-        // Create and inject the widget script
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = 'https://dn.msmstatic.com/site/rakuten/widget.js';
-        script.async = true;
+        const loadWidget = () => {
+            if (widgetContainerRef.current) {
+                // Clear and create temp container for the script to execute
+                widgetContainerRef.current.innerHTML = '';
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'https://dn.msmstatic.com/site/rakuten/widget.js';
+                // widget.js uses document.write in some cases, which might fail after load.
+                // However, Japanese ASP widgets often expect to be loaded exactly where they are.
+                widgetContainerRef.current.appendChild(script);
+            }
+        };
 
-        if (widgetContainerRef.current) {
-            widgetContainerRef.current.appendChild(script);
-        }
+        // Delay slightly to ensure ref is definitely ready and SSR/Hydration has settled
+        const timer = setTimeout(loadWidget, 500);
 
         return () => {
-            // Clean up global function on unmount
+            clearTimeout(timer);
             delete (window as any).MafRakutenWidgetParam;
         };
     }, []);
