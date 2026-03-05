@@ -35,7 +35,7 @@ const AffiliateBanner: React.FC = () => {
                 {/* Affiliate Widget Area (Same-origin Iframe) */}
                 <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px] overflow-hidden">
                     <iframe
-                        src="/rakuten-widget.html"
+                        src="rakuten-widget.html"
                         width="468"
                         height="160"
                         frameBorder="0"
