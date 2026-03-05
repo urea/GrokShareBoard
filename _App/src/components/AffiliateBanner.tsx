@@ -2,23 +2,7 @@ import React from 'react';
 import { LifeBuoy, ExternalLink } from 'lucide-react';
 
 const AffiliateBanner: React.FC = () => {
-    // Data URI is often more compatible than srcDoc for legacy scripts that use document.write
-    const adContent = `
-        <html>
-            <body style="margin:0;padding:0;text-align:center;overflow:hidden;">
-                <script type="text/javascript">
-                    var MafRakutenWidgetParam = function() {
-                        return { size:'468x160', design:'slide', recommend:'on', auto_mode:'on', a_id:'5410287', border:'off' };
-                    };
-                </script>
-                <script type="text/javascript" src="https://dn.msmstatic.com/site/rakuten/widget.js"></script>
-            </body>
-        </html>
-    `;
-
-    // Encode the HTML content to safe data URL
-    const adDataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(adContent)}`;
-
+    // Using a separate static HTML file in /public is the most robust way to embed legacy ad scripts
     return (
         <div className="mb-6 bg-[#252525]/30 border border-gray-800 rounded-md overflow-hidden shadow-sm">
             <div className="flex flex-col lg:flex-row items-stretch">
@@ -48,16 +32,17 @@ const AffiliateBanner: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Affiliate Widget Area (Data URL) */}
+                {/* Affiliate Widget Area (Same-origin Iframe) */}
                 <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px] overflow-hidden">
                     <iframe
-                        src={adDataUrl}
-                        width="100%"
+                        src="/rakuten-widget.html"
+                        width="468"
                         height="160"
                         frameBorder="0"
                         scrolling="no"
                         title="Rakuten Widget"
-                        className="w-full max-w-[468px]"
+                        className="w-full max-w-[468px] h-[160px]"
+                        allow="payment; publickey-credentials-get"
                     />
                 </div>
             </div>
