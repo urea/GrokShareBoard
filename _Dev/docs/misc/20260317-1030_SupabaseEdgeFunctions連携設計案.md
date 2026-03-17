@@ -1,43 +1,39 @@
 # 設計案: Supabase Edge Functions を用いた非同期メタデータ補完 (Grok新仕様対応)
 
 ## 1. 背景と目的
-Grokの配信仕様変更（assets.grok.com への移行）により、UUIDのみからリソースURL（特に動画）を予測することが不可能になった。クライアントサイドでのスクレイピングはCORS制限により困難なため、Supabase側のサーバーサイド処理を活用し、非同期で情報を補完する仕組みを構築する。
+Grokの配信仕様変更により、動画配信URL (`assets.grok.com`) には `user_id` が含まれるようになった。画像については `v=3` プロキシで救済可能だが、動画再生には `user_id` の特定が不可欠である。本案では、スクレイピングの目的を「`user_id` の抽出」に一点集中させ、動画URLを動的に合成・補完する仕組みを構築する。
 
-## 2. アーキテクチャ構成
-本案では、データの「投稿」と「詳細情報の取得」を分離する。
+## 2. 実装戦略: user_id 合成方式
+動画URLは以下の規則に従うことが判明している：
+`https://assets.grok.com/users/[user_id]/generated/[post_uuid]/generated_video.mp4`
 
-### A. 投稿フェーズ (Client-side)
-- ユーザーがGrok URLを投稿。
-- アプリはUUIDを抽出し、DBに保存。
-- 画像URLは暫定的に `https://grok.com/imagine/post/[UUID]/image?v=3` （救済URL）として保存。
+このため、Edge Function は mp4 の実体を探すのではなく、**ページ内のどこかに記載されている `user_id` を見つけるだけでよい。**
 
-### B. 補完フェーズ (Server-side / Asynchronous)
-1. **トリガー**: Supabase DB への `INSERT` を Webhook で検知。
-2. **実行**: Supabase Edge Function (`metadata-refresher`) を起動。
-3. **取得**: 
-   - Edge Function が Grok の投稿ページをフェッチ。
-   - 必要に応じて Headless Browser サービス（JigsawStack, Browserless, Bright Data 等）を介して動的コンテンツを解析。
-   - HTML内の `og:image` やネットワークリクエストから `user_id` および正式な `video_url` (`.mp4`) を抽出。
-4. **反映**: 
-   - 抽出した正式なURLでDBの当該行を `UPDATE`。
+### ワークフロー
+1. **投稿**: クライアントは URL (UUID) のみを投稿。画像は `v=3` プロキシで即時表示。
+2. **検知**: Supabase Webhook が `posts` テーブルへの挿入を検知。
+3. **抽出 (Edge Function)**:
+   - Grok ページをフェッチ。
+   - `og:image` 等のメタタグ、または HTML 内のスクリプトから `assets.grok.com/users/([a-z0-9-]+)/` のパターンを正規表現で抽出。
+4. **合成**: 抽出した `user_id` と、既知の `post_uuid` を組み合わせて `.mp4` URL を生成。
+5. **反映**: DB の `video_url` だけを更新。画像 URL は `v=3` のままでも運用上問題ないため、深追いしない。
 
-## 3. 実現に向けた技術的課題と解決策
+## 3. Supabase 側の確認事項
+実現に向けて、以下の環境設定を確認する必要がある。
 
-| 課題 | 解決策 |
+| 項目 | 確認内容 |
 | :--- | :--- |
-| **動的レンダリング** | GrokのページがJS実行を必要とする場合、単純な `fetch` ではなく Puppeteer / Playwright 互換の外部サービスを利用する。 |
-| **IPブロック/Bot対策** | 住宅用プロキシ（Residential Proxy）を提供するスクレイピングAPIを利用し、Grok側からの遮断を回避する。 |
-| **コスト** | Edge Function の実行回数を最適化。一度 `user_id` が判明したユーザーの別投稿については、UUIDと組み合わせるだけで済むため、フルスクレイピングを省略するキャッシュ戦略をとる。 |
+| **Edge Functions** | `Functions` セクションからデプロイ可能か。 |
+| **Database Webhooks** | `Database > Webhooks` にて INSERT 契機の関数呼び出しを設定できるか。 |
+| **Service Role** | RLS を超えて `video_url` を更新するための `service_role` キーが正しく利用できるか。 |
 
 ## 4. 期待される効果
-- **完全な動画再生**: 従来諦めていた新仕様動画のアプリ内再生が可能になる。
-- **高精細画像**: `v=3` プロキシではなく、オリジナルの高解像度画像を保持できる。
-- **ユーザー体験**: 投稿自体は即座に完了し、裏側で「魔法のように」詳細が埋まっていく体験を提供できる。
+- **確実性の向上**: mp4 ファイルへの直接リンクを探すよりも、HTML 内のユーザーID（通常メタタグに含まれる）を探す方が解析難易度が低い。
+- **メンテナンスコストの低下**: 画像救済URLを活用し続けることで、画像配信系の大規模な仕様変更リスクを分散できる。
 
-## 5. 次のステップ
-1. Supabaseプロジェクトでの Edge Function 有効化。
-2. 最小構成（単一URLのHTMLフェッチ）でのテスト関数の作成。
-3. スクレイピングAPIの選定と試用。
+---
+**更新日**: 2026/03/17
+**ステータス**: 検討案 (Refined Proposal - user_id Focus)
 
 ---
 **作成日**: 2026/03/17
