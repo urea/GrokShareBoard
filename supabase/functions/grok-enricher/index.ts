@@ -9,10 +9,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
  * 
  * Webhook 設定とインフラは将来の拡張（別のメタデータ取得など）のために維持しています。
  */
-serve(async (req) => {
+serve(async (req: Request): Promise<Response> => {
   try {
-    const payload = await req.json();
-    console.log("Webhook triggered (Inactive mode):", payload?.record?.id);
+    // 取得したリクエストをログに記録するのみ
+    const payload = await req.json().catch(() => ({}));
+    console.log("Webhook triggered (Inactive mode):", payload?.record?.id || "No ID");
 
     return new Response(JSON.stringify({ 
       status: "inactive", 
@@ -22,6 +23,11 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json" } 
     });
   } catch (err) {
-    return new Response(err.message, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("Webhook unexpected error:", errorMessage);
+    return new Response(JSON.stringify({ error: errorMessage }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 });
