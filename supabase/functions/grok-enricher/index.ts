@@ -41,11 +41,11 @@ serve(async (req) => {
 
     if (userId) {
       const videoUrl = `https://assets.grok.com/users/${userId}/generated/${postUuid}/generated_video.mp4`;
-      console.log(`[${reqId}] IDENTIFIED user_id: ${userId}`);
+      console.log(`[${reqId}] IDENTIFIED grok_user_id: ${userId}`);
       
       const { error: updateError } = await supabase.from('posts').update({ 
-        video_url: videoUrl,
-        user_id: userId
+        video_url: videoUrl
+        // user_id は投稿者ハッシュのため上書き禁止
       }).eq('id', record.id);
 
       if (updateError) throw updateError;
