@@ -97,7 +97,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
             // Image (Thumbnail): https://imagine-public.x.ai/imagine-public/share-videos/[UUID]_thumbnail.jpg
             const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
-            const imageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg`;
+            const imageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
 
             // Unconditionally set the expected URLs. (Real-time 404 detection is handled by the UI tags)
             const mockPreview: PreviewData = {
