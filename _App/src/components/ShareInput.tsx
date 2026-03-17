@@ -129,12 +129,14 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // But if it's null, we can adopt it.
             // Let's just keep the original user_id. We don't update it.
 
-            // If image preview failed, fallback to canonical thumbnail URL
+            // If image preview failed, fallback to canonical thumbnail URL or proxy
             let finalImageUrl = preview.imageUrl;
             if (previewImageError) {
                 const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
                 if (uuidMatch) {
-                    finalImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                    const uuid = uuidMatch[1];
+                    // Priority: If preview already failed through multiple steps, use the robust proxy
+                    finalImageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
                 }
             }
 
@@ -212,7 +214,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             if (previewImageError) {
                 const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
                 if (uuidMatch) {
-                    finalImageUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuidMatch[1]}_thumbnail.jpg`;
+                    const uuid = uuidMatch[1];
+                    // Priority: If preview already failed through multiple steps, use the robust proxy
+                    finalImageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
                 }
             }
 
@@ -327,12 +331,38 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     const next = cleanUrl.replace('/share-videos/', '/images/').replace('.png', '.jpg');
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else {
-                                                    setPreviewImageError(true);
+                                                    // New Specification Rescue: Try Grok proxy URL
+                                                    const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
+                                                    if (uuidMatch) {
+                                                        const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                        setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                                    } else {
+                                                        setPreviewImageError(true);
+                                                    }
                                                 }
                                             } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
-                                                setPreviewImageError(true);
+                                                // New Specification Rescue: Try Grok proxy URL
+                                                const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
+                                                if (uuidMatch) {
+                                                    const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                                } else {
+                                                    setPreviewImageError(true);
+                                                }
                                             } else {
-                                                setPreviewImageError(true);
+                                                // Check if we are already using the proxy URL
+                                                if (cleanUrl.includes('/image?v=3')) {
+                                                    setPreviewImageError(true);
+                                                } else {
+                                                    // New Specification Rescue: Try Grok proxy URL (Final Attempt)
+                                                    const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
+                                                    if (uuidMatch) {
+                                                        const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                        setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
+                                                    } else {
+                                                        setPreviewImageError(true);
+                                                    }
+                                                }
                                             }
                                         }}
                                     />
