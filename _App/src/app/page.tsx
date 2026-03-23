@@ -42,7 +42,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.7.3';
+  const APP_VERSION = 'v1.7.4';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -142,7 +142,8 @@ export default function Home() {
     setSortBy(newSort);
   };
 
-  const handleTitleClick = () => {
+  const handleVersionClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 親（タイトル）への伝播を防ぎリロードを止める
     const newCount = adminClickCount + 1;
     if (newCount >= 5) {
       setIsAdmin(!isAdmin);
@@ -287,11 +288,25 @@ export default function Home() {
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
           <h1
             className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2 cursor-pointer select-none"
-            onClick={handleTitleClick}
+            onClick={() => window.location.reload()}
+            title="ページを再読み込み / Reload API"
           >
-            GrokShareBoard
-            <span className="text-xs font-normal opacity-80">{APP_VERSION}</span>
-            {isAdmin && <span className="ml-2 text-[10px] bg-white text-blue-600 px-1 rounded animate-pulse uppercase">Admin</span>}
+            <span className="hover:opacity-80 transition-opacity">GrokShareBoard</span>
+            <span 
+              className="text-xs font-normal opacity-80 hover:bg-white/10 px-1 rounded cursor-crosshair transition-colors" 
+              onClick={handleVersionClick}
+              title="Version Info"
+            >
+              {APP_VERSION}
+            </span>
+            {isAdmin && (
+              <span 
+                className="ml-2 text-[10px] bg-white text-blue-600 px-1 rounded animate-pulse uppercase cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Admin
+              </span>
+            )}
           </h1>
 
           {/* Header Links */}
