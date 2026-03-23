@@ -36,15 +36,15 @@ const AffiliateBanner: React.FC = () => {
                 </div>
 
                 {/* Affiliate Widget Area (Same-origin Iframe) */}
-                <div className="bg-white flex items-center justify-center p-1 lg:px-4 min-h-[168px] min-w-[300px] sm:min-w-[480px] overflow-hidden">
+                <div className="bg-white flex items-center justify-center p-2 min-h-[250px] min-w-[300px] sm:min-w-[320px] overflow-hidden shrink-0">
                     <iframe
-                        src="rakuten-widget.html"
-                        width="468"
-                        height="160"
+                        src="ninja-admax.html"
+                        width="300"
+                        height="250"
                         frameBorder="0"
                         scrolling="no"
-                        title="Rakuten Widget"
-                        className="w-full max-w-[468px] h-[160px]"
+                        title="Ninja AdMax Display"
+                        className="w-[300px] h-[250px] object-contain"
                         allow="payment; publickey-credentials-get"
                     />
                 </div>
