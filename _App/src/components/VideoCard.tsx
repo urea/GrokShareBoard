@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play } from 'lucide-react';
+import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
 import CommentSection from './CommentSection';
@@ -16,9 +16,10 @@ interface VideoCardProps {
     onUpdate?: (post: Post) => void;
     onOpenVideo?: () => void;
     onOpenDetails?: () => void;
+    onDelete?: (postId: string) => void;
 }
 
-export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate, onOpenVideo, onOpenDetails }: VideoCardProps) {
+export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate, onOpenVideo, onOpenDetails, onDelete }: VideoCardProps) {
     // Helper to enforce the correct thumbnail pattern [UUID]_thumbnail.jpg
     const getValidImageUrl = (url: string | null) => {
         if (!url) return '/placeholder.png';
@@ -57,6 +58,26 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
         } catch (err) {
             console.error('Failed to update NSFW status:', err);
             alert('Failed to update NSFW status');
+        }
+    };
+
+    const handleAdminDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!window.confirm('【管理者権限】本当にこの投稿を完全に削除しますか？\n(Admin operation: Delete this post completely?)')) return;
+
+        try {
+            const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('id', post.id);
+
+            if (error) throw error;
+            if (onDelete) {
+                onDelete(post.id);
+            }
+        } catch (err) {
+            console.error('Failed to delete post:', err);
+            alert('Failed to delete post');
         }
     };
 
@@ -184,15 +205,24 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     </div>
                                 </div>
                                 {isAdmin && (
-                                    <button
-                                        onClick={handleAdminNsfwToggle}
-                                        className={`h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border transition-colors ml-1 ${post.nsfw
-                                            ? 'bg-red-600 border-red-400 text-white'
-                                            : 'bg-gray-700 border-gray-500 text-gray-300 hover:bg-gray-600'
-                                            }`}
-                                    >
-                                        ADMIN:{post.nsfw ? 'NSFW' : 'SFW'}
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={handleAdminNsfwToggle}
+                                            className={`h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border transition-colors ml-1 ${post.nsfw
+                                                ? 'bg-red-600 border-red-400 text-white'
+                                                : 'bg-gray-700 border-gray-500 text-gray-300 hover:bg-gray-600'
+                                                }`}
+                                        >
+                                            ADMIN:{post.nsfw ? 'NSFW' : 'SFW'}
+                                        </button>
+                                        <button
+                                            onClick={handleAdminDelete}
+                                            className="h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border border-red-900 bg-red-950/80 text-red-500 hover:bg-red-700 hover:text-white transition-colors ml-0.5"
+                                            title="強制削除 / Force Delete"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>

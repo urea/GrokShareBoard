@@ -523,6 +523,9 @@ export default function Home() {
                   onUpdate={(updatedPost) => {
                     setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
                   }}
+                  onDelete={(deletedId) => {
+                    setPosts(prev => prev.filter(p => p.id !== deletedId));
+                  }}
                   onOpenVideo={() => handleOpenVideo(post)}
                   onOpenDetails={() => setActivePromptPostId(post.id)}
                 />
