@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
@@ -34,6 +34,9 @@ export default function Home() {
   const [activeVideoPostId, setActiveVideoPostId] = useState<string | null>(null);
   const [activePromptPostId, setActivePromptPostId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
+  // URLパラメータ（?postId=XXX）経由で直接開かれた投稿データを保持するステート
+  // 一覧（posts）に含まれない投稿でも詳細モーダルを表示可能にするために使用
+  const [directPost, setDirectPost] = useState<Post | null>(null);
 
   // Swipe handling states
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -112,6 +115,30 @@ export default function Home() {
       setShowNsfw(true);
     }
     setIsInitialized(true);
+
+    // === 第2段階: URLパラメータ ?postId=XXX による詳細モーダル自動展開 ===
+    // 外部（Xのシェアリンク等）からアクセスされた場合に、該当投稿の詳細画面を即座に表示する。
+    // 一覧の読み込み（fetchPosts）とは独立して、指定IDの投稿を直接Supabaseからフェッチする。
+    const params = new URLSearchParams(window.location.search);
+    const postIdFromUrl = params.get('postId');
+    if (postIdFromUrl) {
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', postIdFromUrl)
+            .single();
+          if (data && !error) {
+            // 直接フェッチした投稿データを保持し、詳細モーダルを開く
+            setDirectPost(data);
+            setActivePromptPostId(data.id);
+          }
+        } catch (err) {
+          console.error('Failed to fetch post from URL parameter:', err);
+        }
+      })();
+    }
   }, []);
 
   // Consolidated fetch effect for filter/sort changes
@@ -269,7 +296,9 @@ export default function Home() {
   };
 
   const activeVideoPost = posts.find(p => p.id === activeVideoPostId);
-  const activePromptPost = posts.find(p => p.id === activePromptPostId);
+  // activePromptPostは一覧（posts）から探し、見つからなければ直接フェッチした投稿（directPost）を使用する
+  // これにより、?postId=XXXで直接アクセスされた場合でも、一覧に該当投稿がなくても詳細モーダルを表示できる
+  const activePromptPost = posts.find(p => p.id === activePromptPostId) || (directPost?.id === activePromptPostId ? directPost : undefined);
 
   // Helper for generating correct thumbnail string
   const getValidImageUrl = (url: string | null) => {
@@ -656,6 +685,21 @@ export default function Home() {
                       >
                         <ExternalLink size={12} className="sm:w-3.5 sm:h-3.5" /> Grok
                       </a>
+                      {/* === 第2段階: Xでシェアするボタン === */}
+                      {/* OGPは意図的に設定しない（凍結リスク回避）。テキストとURLのみをXの投稿画面に渡す安全設計。 */}
+                      <button
+                        onClick={() => {
+                          const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                          const shareUrl = `${siteUrl}/?postId=${activePromptPost.id}`;
+                          const shareText = 'GrokShareBoardの投稿をチェック！';
+                          const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
+                          window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+                        }}
+                        className="flex items-center gap-1 text-[10px] sm:text-xs text-sky-400 hover:text-sky-300 bg-gray-800 hover:bg-gray-700 px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap"
+                        title="この投稿をX（Twitter）でシェア"
+                      >
+                        <Share2 size={12} className="sm:w-3.5 sm:h-3.5" /> Share
+                      </button>
                       <button
                         onClick={() => {
                           if (!activePromptPost.prompt) return;
