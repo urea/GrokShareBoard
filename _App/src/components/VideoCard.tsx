@@ -182,7 +182,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                                 console.error('Failed to increment click:', err);
                                             }
                                         }}
-                                        className="h-full flex items-center gap-1 text-[10px] text-gray-300 hover:text-white bg-black/50 px-2 rounded border border-gray-600 transition-colors"
+                                        className="h-full flex items-center gap-1 text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
                                         title="Open in Grok"
                                     >
                                         <ExternalLink size={10} /> Grok
@@ -197,7 +197,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                             const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
                                             window.open(tweetUrl, '_blank', 'noopener,noreferrer');
                                         }}
-                                        className="h-full flex items-center gap-1 text-[10px] text-sky-300 hover:text-sky-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
+                                        className="h-full flex items-center gap-1 text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
                                         title="\u3053\u306e\u6295\u7a3f\u3092X\uff08Twitter\uff09\u3067\u30b7\u30a7\u30a2"
                                     >
                                         <Share2 size={10} /> Share
