@@ -31,7 +31,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [activeVideoPostId, setActiveVideoPostId] = useState<string | null>(null);
+  // activeVideoPostId は廃止済み（詳細モーダルに統合）。互換性のため残さず完全削除。
   const [activePromptPostId, setActivePromptPostId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
   // URLパラメータ（?postId=XXX）経由で直接開かれた投稿データを保持するステート
@@ -116,7 +116,7 @@ export default function Home() {
     }
     setIsInitialized(true);
 
-    // === 第2段階: URLパラメータ ?postId=XXX による詳細モーダル自動展開 ===
+    // === URLパラメータ ?postId=XXX による詳細モーダル自動展開 ===
     // 外部（Xのシェアリンク等）からアクセスされた場合に、該当投稿の詳細画面を即座に表示する。
     // 一覧の読み込み（fetchPosts）とは独立して、指定IDの投稿を直接Supabaseからフェッチする。
     const params = new URLSearchParams(window.location.search);
@@ -133,6 +133,12 @@ export default function Home() {
             // 直接フェッチした投稿データを保持し、詳細モーダルを開く
             setDirectPost(data);
             setActivePromptPostId(data.id);
+            // URLパラメータ経由でもビューカウントを加算する
+            try {
+              await supabase.rpc('increment_view', { post_id: data.id });
+            } catch (viewErr) {
+              console.error('Failed to increment view from URL param:', viewErr);
+            }
           }
         } catch (err) {
           console.error('Failed to fetch post from URL parameter:', err);
@@ -185,21 +191,14 @@ export default function Home() {
 
   // Navigate Modal Functions
   const handleNavigate = async (direction: 1 | -1) => {
-    if (activeVideoPostId) {
-      const currentIndex = posts.findIndex(p => p.id === activeVideoPostId);
-      if (currentIndex === -1) return;
-      const nextIndex = currentIndex + direction;
-      if (nextIndex >= 0 && nextIndex < posts.length) {
-        const nextPost = posts[nextIndex];
-        // Execute the same open logic to get View increment
-        handleOpenVideo(nextPost);
-      }
-    } else if (activePromptPostId) {
+    // 詳細モーダルに統合されたため、activePromptPostIdのみで前後移動を管理
+    if (activePromptPostId) {
       const currentIndex = posts.findIndex(p => p.id === activePromptPostId);
       if (currentIndex === -1) return;
       const nextIndex = currentIndex + direction;
       if (nextIndex >= 0 && nextIndex < posts.length) {
-        setActivePromptPostId(posts[nextIndex].id);
+        const nextPost = posts[nextIndex];
+        handleOpenDetails(nextPost);
       }
     }
   };
@@ -208,7 +207,6 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (activeVideoPostId) setActiveVideoPostId(null);
         if (activePromptPostId) setActivePromptPostId(null);
       } else if (e.key === 'ArrowRight') {
         handleNavigate(1);
@@ -217,34 +215,32 @@ export default function Home() {
       }
     };
 
-    if (activeVideoPostId || activePromptPostId) {
+    if (activePromptPostId) {
       window.addEventListener('keydown', handleKeyDown);
     }
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeVideoPostId, activePromptPostId]);
+  }, [activePromptPostId]);
 
   // ブラウザの戻るボタン対応 (History API)
   useEffect(() => {
     const handlePopState = () => {
-      // 戻るボタンが押されたらすべてのモーダルを閉じる
-      setActiveVideoPostId(null);
+      // 戻るボタンが押されたらモーダルを閉じる
       setActivePromptPostId(null);
     };
 
     window.addEventListener('popstate', handlePopState);
 
     // モーダルが開いた時に履歴を追加
-    if (activeVideoPostId || activePromptPostId) {
-      const hash = activeVideoPostId ? '#video' : '#prompt';
-      if (window.location.hash !== hash) {
-        window.history.pushState({ modal: true }, '', hash);
+    if (activePromptPostId) {
+      if (window.location.hash !== '#detail') {
+        window.history.pushState({ modal: true }, '', '#detail');
       }
     } else {
-      // モーダルが閉じていて、かつハッシュが残っている場合は履歴を正常化（戻るボタン以外で閉じた場合）
-      if (window.location.hash === '#video' || window.location.hash === '#prompt') {
+      // モーダルが閉じていて、かつハッシュが残っている場合は履歴を正常化
+      if (window.location.hash === '#detail' || window.location.hash === '#video' || window.location.hash === '#prompt') {
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
@@ -252,7 +248,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeVideoPostId, activePromptPostId]);
+  }, [activePromptPostId]);
 
   // Swipe event handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -278,9 +274,11 @@ export default function Home() {
     setTouchEndX(null);
   };
 
-  const handleOpenVideo = async (post: Post) => {
+  // 詳細モーダルを開く統合関数（サムネクリック・詳細ボタン・ナビゲーション共通）
+  // ビューカウントの加算もここで一括管理する
+  const handleOpenDetails = async (post: Post) => {
     setVideoError(false);
-    setActiveVideoPostId(post.id);
+    setActivePromptPostId(post.id);
 
     // Optimistic update for views in the global list
     const newViews = (post.views || 0) + 1;
@@ -294,8 +292,6 @@ export default function Home() {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, views: post.views } : p));
     }
   };
-
-  const activeVideoPost = posts.find(p => p.id === activeVideoPostId);
   // activePromptPostは一覧（posts）から探し、見つからなければ直接フェッチした投稿（directPost）を使用する
   // これにより、?postId=XXXで直接アクセスされた場合でも、一覧に該当投稿がなくても詳細モーダルを表示できる
   const activePromptPost = posts.find(p => p.id === activePromptPostId) || (directPost?.id === activePromptPostId ? directPost : undefined);
@@ -570,8 +566,8 @@ export default function Home() {
                   onDelete={(deletedId) => {
                     setPosts(prev => prev.filter(p => p.id !== deletedId));
                   }}
-                  onOpenVideo={() => handleOpenVideo(post)}
-                  onOpenDetails={() => setActivePromptPostId(post.id)}
+                  onOpenVideo={() => handleOpenDetails(post)}
+                  onOpenDetails={() => handleOpenDetails(post)}
                 />
               </div>
             ))
@@ -748,91 +744,7 @@ export default function Home() {
         );
       })()}
 
-      {/* Video / Full Image Preview Modal */}
-      {activeVideoPost && (() => {
-        const currentIndex = posts.findIndex(p => p.id === activeVideoPostId);
-        const hasPrev = currentIndex > 0;
-        const hasNext = currentIndex < posts.length - 1;
-
-        return (
-          <ModalPortal>
-            <div
-              className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md group"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveVideoPostId(null);
-              }}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveVideoPostId(null);
-                }}
-                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-[10010] p-2 bg-black/50 rounded-full"
-              >
-                ✕ Close
-              </button>
-
-              {hasPrev && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleNavigate(-1); }}
-                  className="absolute left-1 md:left-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-1.5 md:p-4 z-[10010] opacity-80 md:opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronLeft className="w-8 h-8 md:w-12 md:h-12" />
-                </button>
-              )}
-
-              <div
-                className="relative flex items-center justify-center w-full max-w-5xl max-h-[90vh] p-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Only show video if it's explicitly a video and no error has occurred */}
-                {activeVideoPost.video_url && activeVideoPost.video_url.includes('.mp4') && !videoError ? (
-                  <video
-                    key={`video-${activeVideoPost.id}`}
-                    src={activeVideoPost.video_url}
-                    autoPlay
-                    controls
-                    className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black border border-gray-800"
-                    onError={() => {
-                      setVideoError(true);
-                    }}
-                  />
-                ) : (
-                  <img
-                    key={`img-${activeVideoPost.id}`}
-                    src={activeVideoPost.image_url ? activeVideoPost.image_url.replace('_thumbnail.jpg', '.jpg') : getValidImageUrl(activeVideoPost.image_url)}
-                    alt={activeVideoPost.prompt || 'Grok generation full image'}
-                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black border border-gray-800"
-                    onError={(e) => {
-                      const displayImage = getValidImageUrl(activeVideoPost.image_url);
-                      const target = e.currentTarget;
-                      if (target.src.endsWith('.jpg') && !target.src.includes('_thumbnail')) {
-                        target.src = target.src.replace('.jpg', '.png');
-                      } else if (target.src !== displayImage) {
-                        target.src = displayImage;
-                      }
-                    }}
-                  />
-                )}
-              </div>
-
-              {hasNext && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleNavigate(1); }}
-                  className="absolute right-1 md:right-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors bg-black/40 hover:bg-black/80 rounded-full p-1.5 md:p-4 z-[10010] opacity-80 md:opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronRight className="w-8 h-8 md:w-12 md:h-12" />
-                </button>
-              )}
-
-            </div>
-          </ModalPortal>
-        );
-      })()}
+      {/* 旧ビデオモーダルは廃止済み。詳細モーダルに統合されました。 */}
 
       <NsfwWarningModal
         isOpen={showNsfwConfirm}
