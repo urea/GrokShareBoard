@@ -45,7 +45,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.9.3';
+  const APP_VERSION = 'v1.9.5';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -750,6 +750,22 @@ export default function Home() {
         isOpen={showNsfwConfirm}
         onClose={() => setShowNsfwConfirm(false)}
         onConfirm={() => setShowNsfw(true)}
+      />
+
+      {/* 忍者AdMax: アクセス計測用の不可視iframe (v1.9.4) */}
+      {/* 広告としての表示機能は廃止し、Amazonバナーに移行済み。 */}
+      {/* ただしインプレッション数によるアクセス数の把握のため、1x1pxの不可視iframeとして残す。 */}
+      <iframe
+        src="ninja-admax-pc.html"
+        width="1"
+        height="1"
+        frameBorder="0"
+        scrolling="no"
+        title="Access Counter"
+        className="absolute w-[1px] h-[1px] opacity-0 pointer-events-none overflow-hidden"
+        style={{ position: 'absolute', left: '-9999px' }}
+        aria-hidden="true"
+        tabIndex={-1}
       />
 
       {/* Basic Footer */}

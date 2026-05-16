@@ -2,7 +2,10 @@ import React from 'react';
 import { LifeBuoy, ExternalLink } from 'lucide-react';
 
 const AffiliateBanner: React.FC = () => {
-    // Using a separate static HTML file in /public is the most robust way to embed legacy ad scripts
+    // 忍者AdMaxから自作Amazonバナーに移行 (v1.9.4)
+    // バナー画像は public/ に配置済み。リンク先はAmazonトップページ（アソシエイトリンク）。
+    const AMAZON_AFFILIATE_URL = 'https://amzn.to/3RcaO1j';
+
     return (
         <div className="mb-6 bg-[#252525]/30 border border-gray-800 rounded-md overflow-hidden shadow-sm">
             <div className="flex flex-col xl:flex-row items-stretch">
@@ -35,37 +38,25 @@ const AffiliateBanner: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Affiliate Widget Area (Responsive PC/SP Switch) */}
-                <div className="bg-white flex flex-col items-center justify-center p-2 xl:px-4 overflow-hidden shrink-0">
-                    
-                    {/* PC View (728x90) - Only visible on md (768px) and above */}
-                    <div className="hidden md:flex items-center justify-center min-w-[728px] min-h-[90px] w-full">
-                        <iframe
-                            src="ninja-admax-pc.html"
-                            width="728"
-                            height="90"
-                            frameBorder="0"
-                            scrolling="no"
-                            title="Ninja AdMax PC Display"
-                            className="w-[728px] h-[90px] object-contain"
-                            allow="payment; publickey-credentials-get"
-                        />
-                    </div>
-
-                    {/* SP/Mobile View (320x100) - Only visible below md (768px) */}
-                    <div className="flex md:hidden items-center justify-center min-w-[320px] min-h-[100px] w-full">
-                        <iframe
-                            src="ninja-admax-sp.html"
-                            width="320"
-                            height="100"
-                            frameBorder="0"
-                            scrolling="no"
-                            title="Ninja AdMax SP Display"
+                {/* Amazon Affiliate Banner (320x100 統一) */}
+                {/* PC/SP出し分けを廃止し、小さいバナー1枚で統一。中央配置。 */}
+                <div className="bg-white flex items-center justify-center p-2 xl:px-4 overflow-hidden shrink-0">
+                    <a
+                        href={AMAZON_AFFILIATE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block hover:opacity-90 transition-opacity"
+                        title="Amazonでお買い物（運営支援になります）"
+                    >
+                        <img
+                            src="amazon320x100.png"
+                            alt="Amazonでお買い物 - サイト運営を支援"
+                            width={320}
+                            height={100}
                             className="w-[320px] h-[100px] object-contain"
-                            allow="payment; publickey-credentials-get"
+                            loading="lazy"
                         />
-                    </div>
-
+                    </a>
                 </div>
             </div>
         </div>
@@ -73,3 +64,4 @@ const AffiliateBanner: React.FC = () => {
 };
 
 export default AffiliateBanner;
+
