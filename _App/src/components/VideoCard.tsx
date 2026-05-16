@@ -191,8 +191,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                                            const shareUrl = `${siteUrl}/?postId=${post.id}`;
+                                            const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname.split('?')[0].replace(/\/$/, '')}` : '';
+                                            const shareUrl = `${siteUrl}?postId=${post.id}`;
                                             const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
                                             const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
                                             window.open(tweetUrl, '_blank', 'noopener,noreferrer');
@@ -282,8 +282,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                                    const shareUrl = `${siteUrl}/?postId=${post.id}`;
+                                    const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname.split('?')[0].replace(/\/$/, '')}` : '';
+                                    const shareUrl = `${siteUrl}?postId=${post.id}`;
                                     const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
                                     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
                                     window.open(tweetUrl, '_blank', 'noopener,noreferrer');

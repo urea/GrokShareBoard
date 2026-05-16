@@ -689,8 +689,8 @@ export default function Home() {
                       {/* OGPは意図的に設定しない（凍結リスク回避）。テキストとURLのみをXの投稿画面に渡す安全設計。 */}
                       <button
                         onClick={() => {
-                          const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                          const shareUrl = `${siteUrl}/?postId=${activePromptPost.id}`;
+                          const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname.split('?')[0].replace(/\/$/, '')}` : '';
+                          const shareUrl = `${siteUrl}?postId=${activePromptPost.id}`;
                           const shareText = 'GrokShareBoardの投稿をチェック！';
                           const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
                           window.open(tweetUrl, '_blank', 'noopener,noreferrer');
