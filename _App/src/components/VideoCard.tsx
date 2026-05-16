@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play, Trash2 } from 'lucide-react';
+import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play, Trash2, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createPortal } from 'react-dom';
 import CommentSection from './CommentSection';
@@ -187,6 +187,21 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     >
                                         <ExternalLink size={10} /> Grok
                                     </a>
+                                    {/* Xシェアボタン: 一覧画面からも直接シェア可能にし、シェア機能の認知向上を図る */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                                            const shareUrl = `${siteUrl}/?postId=${post.id}`;
+                                            const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
+                                            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
+                                            window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+                                        }}
+                                        className="h-full flex items-center gap-1 text-[10px] text-sky-300 hover:text-sky-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
+                                        title="\u3053\u306e\u6295\u7a3f\u3092X\uff08Twitter\uff09\u3067\u30b7\u30a7\u30a2"
+                                    >
+                                        <Share2 size={10} /> Share
+                                    </button>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400 bg-black/40 px-2 h-6 rounded-full border border-white/10 shadow-inner">
                                     <div className="flex items-center gap-1" title="Comments">
@@ -263,6 +278,21 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                             >
                                 <ExternalLink size={compact ? 12 : 14} />
                             </a>
+                            {/* Xシェアボタン（通常モード）: アイコンのみでコンパクトに配置 */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                                    const shareUrl = `${siteUrl}/?postId=${post.id}`;
+                                    const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
+                                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
+                                    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+                                }}
+                                className="flex items-center gap-1 mr-1 text-gray-400 hover:text-sky-400 transition-colors"
+                                title="\u3053\u306e\u6295\u7a3f\u3092X\uff08Twitter\uff09\u3067\u30b7\u30a7\u30a2"
+                            >
+                                <Share2 size={compact ? 12 : 14} />
+                            </button>
                             <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Views">
                                 <Eye size={compact ? 10 : 12} className="text-gray-400" />
                                 <span className="font-medium text-gray-300">{post.views || 0}</span>
