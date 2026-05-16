@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Grok Share Board",
     description: "Grok Share Boardは、xAI『Grok』で生成された画像や動画の保管・共有掲示板です。URLを貼るだけでプロンプトと一緒にストック可能。ログイン不要で誰でも気軽にお使いいただけます。",
     images: ["https://urea.github.io/GrokShareBoard/og-image.png"],
