@@ -3,6 +3,7 @@ export interface Post {
     id: string;
     url: string;
     prompt: string | null;
+    description: string | null;
     user_id: string | null;
     video_url: string | null;
     image_url: string | null;
@@ -15,6 +16,9 @@ export interface Post {
     nsfw: boolean;
     comment_count: number;
     last_comment_at: string | null;
+    prompt_fetched_at: string | null;
+    prompt_fetch_status: string | null;
+    prompt_fetch_error: string | null;
     created_at: string;
 }
 

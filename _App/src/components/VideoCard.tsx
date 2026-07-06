@@ -33,6 +33,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
 
     const displayImageUrl = getValidImageUrl(post.image_url);
     const isVideo = displayImageUrl?.includes('_thumbnail.jpg');
+    const fetchedPrompt = post.prompt_fetch_status === 'fetched' ? post.prompt : null;
+    const displayText = post.description || fetchedPrompt;
     const [imageError, setImageError] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
@@ -94,7 +96,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                 {!imageError ? (
                     <img
                         src={displayImageUrl}
-                        alt={post.prompt || 'Grok generation'}
+                        alt={displayText || 'Grok generation'}
                         referrerPolicy="no-referrer"
                         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && post.video_url && !videoError ? 'opacity-0' : 'opacity-100'}`}
                         onError={(e) => {
@@ -154,9 +156,9 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                 {overlayStyle && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10 transition-opacity group-hover:opacity-100">
                         <div className="flex flex-col gap-1 pointer-events-auto">
-                            {post.prompt && (
+                            {displayText && (
                                 <p className="text-white text-xs font-medium line-clamp-2 leading-tight drop-shadow-md mb-1">
-                                    {post.prompt}
+                                    {displayText}
                                 </p>
                             )}
                             <div className="flex flex-wrap items-center justify-between gap-1 mt-1">
@@ -249,8 +251,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
             {!overlayStyle && (
                 <div className={`${compact ? 'p-2' : 'p-3'}`}>
                     {!compact && (
-                        <p className="text-gray-300 text-sm line-clamp-2 mb-2" title={post.prompt || ''}>
-                            {post.prompt || 'No prompt info'}
+                        <p className="text-gray-300 text-sm line-clamp-2 mb-2" title={displayText || ''}>
+                            {displayText || 'No description'}
                         </p>
                     )}
                     <div className={`text-gray-500 flex justify-between items-center ${compact ? 'text-[10px]' : 'text-xs'}`}>

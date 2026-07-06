@@ -19,7 +19,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState<PreviewData | null>(null);
-    const [editablePrompt, setEditablePrompt] = useState('');
+    const [editableDescription, setEditableDescription] = useState('');
     // const [editableUserId, setEditableUserId] = useState(''); // Abolished
     const [previewImageError, setPreviewImageError] = useState(false);
     const [error, setError] = useState('');
@@ -44,7 +44,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         setLoading(true);
         setError('');
         setPreview(null);
-        // setEditablePrompt(''); // REMOVED: Preserve user input
+        // setEditableDescription(''); // REMOVED: Preserve user input
         setPreviewImageError(false);
         setIsEditing(false);
 
@@ -77,16 +77,19 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 // Unconditionally set video_url to the predictable URL format if missing (Let UI handle 404s)
                 const currentVideoUrl = existingPost.video_url || `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
 
+                const existingDescription = existingPost.description
+                    || (existingPost.prompt_fetch_status === 'fetched' ? '' : existingPost.prompt || '');
+
                 setPreview({
                     url: existingPost.url,
                     videoUrl: currentVideoUrl,
                     imageUrl: dbImageUrl,
                     siteName: existingPost.site_name || 'Grok',
                     title: existingPost.title || 'Grok Creation',
-                    description: existingPost.prompt || '',
+                    description: existingDescription,
                     userId: existingPost.user_id
                 });
-                setEditablePrompt(existingPost.prompt || '');
+                setEditableDescription(existingDescription);
                 setIsNsfw(!!existingPost.nsfw); // Set NSFW state from DB
                 // setEditableUserId(existingPost.user_id || ''); // Abolished
                 setLoading(false);
@@ -146,7 +149,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             const { data: updatedData, error: updateError } = await supabase
                 .from('posts')
                 .update({
-                    prompt: editablePrompt,
+                    description: editableDescription,
                     image_url: cleanImageUrl,
                     video_url: preview.videoUrl ? preview.videoUrl.split('?')[0] : '',
                     nsfw: isNsfw,
@@ -161,7 +164,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Success state
             setUrl('');
             setPreview(null);
-            setEditablePrompt('');
+            setEditableDescription('');
             setIsEditing(false);
             onPostCreated(); // Refresh feed
             alert('投稿を更新しました / Post updated successfully!');
@@ -190,7 +193,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Success state
             setUrl('');
             setPreview(null);
-            setEditablePrompt('');
+            setEditableDescription('');
             setIsEditing(false);
             onPostCreated(); // Refresh feed
             alert('投稿を削除しました / Post deleted successfully!');
@@ -232,7 +235,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     {
                         id: grokUuid, // EXPLICITLY SET THE ID TO GROK UUID
                         url: cleanPreviewUrl,
-                        prompt: editablePrompt,
+                        prompt: null,
+                        description: editableDescription,
                         user_id: clientId, // Use anonymous Client ID
                         video_url: preview.videoUrl ? preview.videoUrl.split('?')[0] : '',
                         image_url: cleanImageUrl,
@@ -240,7 +244,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                         title: preview.title,
                         width: 0,
                         height: 0,
-                        nsfw: isNsfw
+                        nsfw: isNsfw,
+                        prompt_fetch_status: 'pending'
                     }
                 ]);
 
@@ -251,7 +256,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
             setUrl('');
             setPreview(null);
-            setEditablePrompt('');
+            setEditableDescription('');
             setIsNsfw(false);
             onPostCreated();
         } catch (err: any) {
@@ -414,11 +419,14 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                     {/* 3. Right Column / Bottom row: Text Area and Actions */}
                     <div className="flex-1 flex flex-col pt-1">
                         <textarea
-                            value={editablePrompt}
-                            onChange={(e) => setEditablePrompt(e.target.value)}
-                            placeholder="プロンプトや説明を入力... / Describe the content or paste the prompt... (Optional)"
+                            value={editableDescription}
+                            onChange={(e) => setEditableDescription(e.target.value)}
+                            placeholder="説明・メモを入力... / Add a description or memo... (Optional)"
                             className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none h-20 sm:h-28 resize-none transition-all placeholder-gray-500 text-sm leading-relaxed shadow-inner scrollbar-thin scrollbar-thumb-gray-700"
                         />
+                        <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
+                            Grok元プロンプトは投稿後に順次取得されます。取得には時間がかかる場合や、取得できない場合があります。
+                        </p>
 
                         {error && <p className="text-red-400 text-xs mt-2 font-medium">{error}</p>}
 
@@ -437,12 +445,12 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             </label>
 
                             <div className="flex items-center gap-2 ml-auto">
-                                {!preview && (url || editablePrompt || isNsfw) && (
+                                {!preview && (url || editableDescription || isNsfw) && (
                                     <button
                                         type="button"
                                         onClick={() => {
                                             setUrl('');
-                                            setEditablePrompt('');
+                                            setEditableDescription('');
                                             setIsNsfw(false);
                                             setError('');
                                         }}

@@ -45,7 +45,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.9.6';
+  const APP_VERSION = 'v1.10.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -79,7 +79,7 @@ export default function Home() {
 
       if (searchQuery.trim()) {
         const q = searchQuery.trim();
-        query = query.or(`prompt.ilike.%${q}%,user_id.ilike.%${q}%`);
+        query = query.or(`prompt.ilike.%${q}%,description.ilike.%${q}%,user_id.ilike.%${q}%`);
       }
 
       const { data, error } = await query;
@@ -605,6 +605,11 @@ export default function Home() {
         const currentIndex = posts.findIndex(p => p.id === activePromptPostId);
         const hasPrev = currentIndex > 0;
         const hasNext = currentIndex < posts.length - 1;
+        const originalPrompt = activePromptPost.prompt_fetch_status === 'fetched' && activePromptPost.prompt?.trim()
+          ? activePromptPost.prompt
+          : '';
+        const description = activePromptPost.description?.trim() || '';
+        const promptStatus = activePromptPost.prompt_fetch_status || 'pending';
         return (
           <ModalPortal>
             <div
@@ -645,7 +650,7 @@ export default function Home() {
                     <img
                       key={`modal-img-${activePromptPost.id}`}
                       src={activePromptPost.image_url ? activePromptPost.image_url.replace('_thumbnail.jpg', '.jpg') : getValidImageUrl(activePromptPost.image_url)}
-                      alt={activePromptPost.prompt || 'Grok generation image'}
+                      alt={description || originalPrompt || 'Grok generation image'}
                       className="w-full h-full object-contain max-h-[40vh] md:max-h-[90vh]"
                       onError={(e) => {
                         const displayImage = getValidImageUrl(activePromptPost.image_url);
@@ -665,7 +670,7 @@ export default function Home() {
                   {/* Header Section */}
                   <div className="flex justify-between items-start gap-2 mb-4 shrink-0">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight pt-1">
-                      プロンプト・説明<br className="sm:hidden" /><span className="hidden sm:inline"> / Prompt</span>
+                      Grok元プロンプト<br className="sm:hidden" /><span className="hidden sm:inline"> / Original Prompt</span>
                     </h3>
                     <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2 items-center">
                       <a
@@ -698,8 +703,8 @@ export default function Home() {
                       </button>
                       <button
                         onClick={() => {
-                          if (!activePromptPost.prompt) return;
-                          navigator.clipboard.writeText(activePromptPost.prompt);
+                          if (!originalPrompt) return;
+                          navigator.clipboard.writeText(originalPrompt);
                           const btn = document.getElementById('copy-btn-' + activePromptPost.id);
                           if (btn) {
                             const originalText = btn.innerHTML;
@@ -708,7 +713,11 @@ export default function Home() {
                           }
                         }}
                         id={`copy-btn-${activePromptPost.id}`}
-                        className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap"
+                        disabled={!originalPrompt}
+                        className={`flex items-center gap-1 text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap ${originalPrompt
+                          ? 'text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700'
+                          : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'
+                          }`}
                       >
                         <Copy size={12} className="sm:w-3.5 sm:h-3.5" /> Copy
                       </button>
@@ -721,8 +730,23 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed mb-6">
-                    {activePromptPost.prompt || <span className="text-gray-500 italic">No prompt provided.</span>}
+                    {originalPrompt || (
+                      <span className="text-gray-500 italic">
+                        {promptStatus === 'failed'
+                          ? 'Grok元プロンプトを取得できませんでした。'
+                          : 'Grok元プロンプトは取得待ちです。取得には時間がかかる場合があります。'}
+                      </span>
+                    )}
                   </p>
+
+                  <div className="border-t border-gray-800 pt-5 mb-6">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight mb-3">
+                      説明・メモ <span className="hidden sm:inline">/ Description</span>
+                    </h3>
+                    <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+                      {description || <span className="text-gray-500 italic">No description provided.</span>}
+                    </p>
+                  </div>
 
                   {/* Comment Section (Integrated in Modal) */}
                   <div className="flex-1 mt-auto">
