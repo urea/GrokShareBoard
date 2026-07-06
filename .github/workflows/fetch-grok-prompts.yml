@@ -55,7 +55,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           LIMIT: ${{ inputs.limit || '50' }}
           DELAY_MS: ${{ inputs.delay_ms || '750' }}
-          RETRY_ACCESS_DENIED: ${{ inputs.retry_access_denied != false }}
+          RETRY_ACCESS_DENIED: ${{ inputs.retry_access_denied }}
           APPLY_NSFW: ${{ inputs.apply_nsfw || false }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
