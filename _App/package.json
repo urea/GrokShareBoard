@@ -1,6 +1,6 @@
 {
   "name": "grok-share-app",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -10,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fetch:grok-prompts": "node scripts/fetch_grok_prompts.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
@@ -32,6 +33,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "pg": "^8.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
