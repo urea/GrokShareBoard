@@ -45,7 +45,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.10.0';
+  const APP_VERSION = 'v1.10.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -610,6 +610,20 @@ export default function Home() {
           : '';
         const description = activePromptPost.description?.trim() || '';
         const promptStatus = activePromptPost.prompt_fetch_status || 'pending';
+        const promptStatusMessage = (() => {
+          switch (promptStatus) {
+            case 'no_prompt':
+              return 'Grok元プロンプトはありません。';
+            case 'source_missing':
+              return 'Grok側で投稿またはメディアが見つからないため、元プロンプトを取得できません。';
+            case 'access_denied':
+              return 'Grok側のアクセス制限により、元プロンプトを取得できません。';
+            case 'failed':
+              return 'Grok元プロンプトを取得できませんでした。';
+            default:
+              return 'Grok元プロンプトは取得待ちです。取得には時間がかかる場合があります。';
+          }
+        })();
         return (
           <ModalPortal>
             <div
@@ -732,9 +746,7 @@ export default function Home() {
                   <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed mb-6">
                     {originalPrompt || (
                       <span className="text-gray-500 italic">
-                        {promptStatus === 'failed'
-                          ? 'Grok元プロンプトを取得できませんでした。'
-                          : 'Grok元プロンプトは取得待ちです。取得には時間がかかる場合があります。'}
+                        {promptStatusMessage}
                       </span>
                     )}
                   </p>
