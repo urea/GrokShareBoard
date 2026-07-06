@@ -223,6 +223,10 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
     const handleShare = async () => {
         if (!preview) return;
+        if (previewImageError) {
+            setError('Grok側で「シェア」または「Xに投稿」を押し、「再確認」で公開化を確認してから投稿してください。');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -281,6 +285,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         }
     };
 
+    const isPublicCheckBlockingNewPost = Boolean(preview && !isEditing && previewImageError);
+
     return (
         <div className="w-full max-w-2xl mx-auto mb-8 relative z-10">
             <div className="bg-gray-900/60 p-4 sm:p-5 rounded-3xl border border-gray-800 backdrop-blur-md shadow-2xl transition-all duration-300">
@@ -335,6 +341,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         alt="Thumbnail"
                                         referrerPolicy="no-referrer"
                                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        onLoad={() => setError('')}
                                         onError={() => {
                                             console.log("Image load failed, trying fallbacks...");
                                             const currentUrl = preview.imageUrl;
@@ -407,6 +414,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </a>
                                         <button
                                             onClick={() => {
+                                                setError('');
                                                 const uuid = extractGrokUuid(preview.url);
                                                 if (uuid) {
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: buildGrokImageUrl(uuid, true) }) : null);
@@ -438,14 +446,19 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none h-20 sm:h-28 resize-none transition-all placeholder-gray-500 text-sm leading-relaxed shadow-inner scrollbar-thin scrollbar-thumb-gray-700"
                         />
                         <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
-                            Grok元プロンプトは投稿後に順次取得されます。Grok側でシェアまたはXに投稿済みの場合に取得可能です。取得には時間がかかる場合があります。
+                            投稿前にGrok側で「シェア」または「Xに投稿」を押して公開化してください。公開化確認後に投稿できます。元プロンプト取得には時間がかかる場合があります。
                         </p>
+                        {preview && !previewImageError && !isEditing && (
+                            <p className="mt-2 text-[11px] font-bold text-green-400">
+                                公開化を確認しました。投稿できます。
+                            </p>
+                        )}
                         {previewImageError && preview && (
-                            <div className="mt-2 rounded-xl border border-blue-500/30 bg-blue-950/30 px-3 py-2 text-[11px] leading-relaxed text-blue-100">
+                            <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-950/30 px-3 py-2 text-[11px] leading-relaxed text-amber-100">
                                 <div className="flex items-start gap-2">
-                                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-blue-300" />
+                                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-300" />
                                     <p>
-                                        Grok側で「シェア」または「Xに投稿」を押すと、サムネイル・動画・元プロンプトを取得できる状態になります。投稿はこのまま可能ですが、公開化前は表示やプロンプト取得が失敗することがあります。
+                                        このGrok URLはまだ外部から表示できない状態の可能性があります。Grokの作品ページを開き、メニューから「シェア」または「Xに投稿」を押してください。「ダウンロード」「再生成」「延長」では公開化されません。その後、この画面に戻って「再確認」を押すと投稿できます。
                                     </p>
                                 </div>
                             </div>
@@ -506,18 +519,21 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         </button>
                                         <button
                                             onClick={isEditing ? handleUpdate : handleShare}
-                                            disabled={loading}
+                                            disabled={loading || isPublicCheckBlockingNewPost}
+                                            title={isPublicCheckBlockingNewPost ? 'Grok側で「シェア」または「Xに投稿」を押し、再確認してください' : undefined}
                                             className={`
                                                 px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-1.5 transition-all outline-none shadow-md shadow-black/20
-                                                ${isEditing
+                                                ${isPublicCheckBlockingNewPost
+                                                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                                    : isEditing
                                                     ? 'bg-blue-600 hover:bg-blue-500 text-white'
                                                     : 'bg-green-600 hover:bg-green-500 text-white'
                                                 }
-                                                ${loading ? 'opacity-50 scale-100' : 'active:scale-95 hover:shadow-lg'}
+                                                ${loading ? 'opacity-50 scale-100' : isPublicCheckBlockingNewPost ? '' : 'active:scale-95 hover:shadow-lg'}
                                             `}
                                         >
                                             {loading ? <Loader2 className="animate-spin" size={14} /> : null}
-                                            {isEditing ? 'Update' : 'Post'}
+                                            {isEditing ? 'Update' : isPublicCheckBlockingNewPost ? '公開化待ち' : 'Post'}
                                         </button>
                                     </>
                                 )}

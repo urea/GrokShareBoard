@@ -46,7 +46,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.11.4';
+  const APP_VERSION = 'v1.11.5';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -340,13 +340,13 @@ export default function Home() {
     <div className="min-h-screen bg-[#1a1a1a] text-gray-100 font-sans">
       {/* Simple Title Bar (Monsnode style: Blue/Solid) */}
       <header className="bg-[#0099cc] shadow-md">
-        <div className="container mx-auto px-4 h-12 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 h-12 flex items-center justify-between gap-2 overflow-hidden">
           <h1
-            className="text-lg font-bold text-white tracking-wide flex items-baseline gap-2 cursor-pointer select-none"
+            className="min-w-0 text-base sm:text-lg font-bold text-white tracking-wide flex items-baseline gap-1.5 sm:gap-2 cursor-pointer select-none"
             onClick={() => window.location.reload()}
             title="ページを再読み込み / Reload API"
           >
-            <span className="hover:opacity-80 transition-opacity">GrokShareBoard</span>
+            <span className="truncate hover:opacity-80 transition-opacity">GrokShareBoard</span>
             <span 
               className="text-xs font-normal opacity-80 hover:bg-white/10 px-1 rounded cursor-crosshair transition-colors" 
               onClick={handleVersionClick}
@@ -365,12 +365,12 @@ export default function Home() {
           </h1>
 
           {/* Header Links */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {/* NSFW Toggle Switch (Segmented Control) */}
             <div className="flex bg-black/20 p-0.5 rounded-full border border-white/10 w-fit shadow-inner">
               <button
                 onClick={() => setShowNsfw(false)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${!showNsfw
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-[10px] font-bold transition-all ${!showNsfw
                   ? 'bg-green-600 text-white shadow-sm'
                   : 'text-white/40 hover:text-white/70'
                   }`}
@@ -387,7 +387,7 @@ export default function Home() {
                     setShowNsfw(false);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${showNsfw
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-[10px] font-bold transition-all ${showNsfw
                   ? 'bg-red-600 text-white shadow-sm'
                   : 'text-white/40 hover:text-white/70'
                   }`}
@@ -398,7 +398,7 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="h-4 w-[1px] bg-white/20 mx-1" />
+            <div className="hidden sm:block h-4 w-[1px] bg-white/20 mx-1" />
 
             <a
               href="https://note.com/limber_lynx1258/n/n700edc6393f1"
@@ -410,12 +410,12 @@ export default function Home() {
               <LifeBuoy size={20} className="text-white/60" />
               <span className="hidden lg:inline text-xs font-medium">Feedback</span>
             </a>
-            <div className="h-4 w-[1px] bg-white/20 mx-1" />
+            <div className="hidden min-[420px]:block h-4 w-[1px] bg-white/20 mx-1" />
             <a
               href="https://github.com/urea/GrokShareBoard/blob/main/README.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/80 hover:text-white transition-colors"
+              className="hidden min-[420px]:inline-flex text-white/80 hover:text-white transition-colors"
               title="README"
             >
               <FileText size={20} />
@@ -424,7 +424,7 @@ export default function Home() {
               href="https://github.com/urea/GrokShareBoard/blob/main/CHANGELOG.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/80 hover:text-white transition-colors"
+              className="hidden min-[420px]:inline-flex text-white/80 hover:text-white transition-colors"
               title="CHANGELOG"
             >
               <History size={20} />
