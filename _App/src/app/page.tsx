@@ -45,7 +45,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.11.0';
+  const APP_VERSION = 'v1.11.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -617,7 +617,7 @@ export default function Home() {
             case 'source_missing':
               return 'Grok側で投稿またはメディアが見つからないため、元プロンプトを取得できません。';
             case 'access_denied':
-              return 'Grok側のアクセス制限により、元プロンプトを取得できません。';
+              return 'Grok側で公開化されていないため、元プロンプトを取得できません。Grokで「シェア」または「Xに投稿」を押すと、次回の自動取得で反映される場合があります。';
             case 'failed':
               return 'Grok元プロンプトを取得できませんでした。';
             default:

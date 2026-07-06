@@ -15,6 +15,25 @@ interface PreviewData {
     userId?: string | null;
 }
 
+function extractGrokUuid(value: string) {
+    const match = value.match(/post\/([a-f0-9-]{36})/i);
+    return match ? match[1].toLowerCase() : null;
+}
+
+function buildGrokImageUrl(uuid: string, cacheBust = false) {
+    const base = `https://grok.com/imagine/post/${uuid}/image?v=3`;
+    return cacheBust ? `${base}&t=${Date.now()}` : base;
+}
+
+function isGrokImageProxyUrl(value: string) {
+    try {
+        const parsed = new URL(value);
+        return parsed.hostname === 'grok.com' && parsed.pathname.endsWith('/image');
+    } catch {
+        return value.includes('grok.com/imagine/post/') && value.includes('/image');
+    }
+}
+
 export default function ShareInput({ onPostCreated }: { onPostCreated: () => void }) {
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
@@ -51,11 +70,10 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         try {
             // Client-side regex extraction (GitHub Pages compatible)
             // Pattern: https://grok.com/imagine/post/[UUID]
-            const uuidMatch = url.match(/post\/([a-f0-9-]{36})/);
-            if (!uuidMatch) {
+            const uuid = extractGrokUuid(url);
+            if (!uuid) {
                 throw new Error('Invalid Grok URL format. Could not find UUID.');
             }
-            const uuid = uuidMatch[1];
 
             // Check if URL already exists in DB
             const { data: existingPost, error: fetchError } = await supabase
@@ -100,7 +118,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
             // Image (Thumbnail): https://imagine-public.x.ai/imagine-public/share-videos/[UUID]_thumbnail.jpg
             const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
-            const imageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
+            const imageUrl = buildGrokImageUrl(uuid);
 
             // Unconditionally set the expected URLs. (Real-time 404 detection is handled by the UI tags)
             const mockPreview: PreviewData = {
@@ -135,11 +153,10 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // If image preview failed, fallback to canonical thumbnail URL or proxy
             let finalImageUrl = preview.imageUrl;
             if (previewImageError) {
-                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
-                if (uuidMatch) {
-                    const uuid = uuidMatch[1];
+                const uuid = extractGrokUuid(preview.url);
+                if (uuid) {
                     // Priority: If preview already failed through multiple steps, use the robust proxy
-                    finalImageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
+                    finalImageUrl = buildGrokImageUrl(uuid);
                 }
             }
 
@@ -215,16 +232,14 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // instead of saving the last failed attempt (e.g. .jpg)
             let finalImageUrl = preview.imageUrl;
             if (previewImageError) {
-                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
-                if (uuidMatch) {
-                    const uuid = uuidMatch[1];
+                const uuid = extractGrokUuid(preview.url);
+                if (uuid) {
                     // Priority: If preview already failed through multiple steps, use the robust proxy
-                    finalImageUrl = `https://grok.com/imagine/post/${uuid}/image?v=3`;
+                    finalImageUrl = buildGrokImageUrl(uuid);
                 }
             }
 
-            const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
-            const grokUuid = uuidMatch ? uuidMatch[1] : undefined;
+            const grokUuid = extractGrokUuid(preview.url) || undefined;
 
             const cleanImageUrl = finalImageUrl.split('?')[0];
             const cleanPreviewUrl = preview.url.split('?')[0];
@@ -337,9 +352,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else {
                                                     // New Specification Rescue: Try Grok proxy URL
-                                                    const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
-                                                    if (uuidMatch) {
-                                                        const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                    const uuid = extractGrokUuid(preview?.url || '');
+                                                    if (uuid) {
+                                                        const next = buildGrokImageUrl(uuid);
                                                         setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
@@ -347,22 +362,22 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 }
                                             } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
                                                 // New Specification Rescue: Try Grok proxy URL
-                                                const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
-                                                if (uuidMatch) {
-                                                    const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                const uuid = extractGrokUuid(preview?.url || '');
+                                                if (uuid) {
+                                                    const next = buildGrokImageUrl(uuid);
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else {
                                                     setPreviewImageError(true);
                                                 }
                                             } else {
                                                 // Check if we are already using the proxy URL
-                                                if (cleanUrl.includes('/image?v=3')) {
+                                                if (isGrokImageProxyUrl(currentUrl)) {
                                                     setPreviewImageError(true);
                                                 } else {
                                                     // New Specification Rescue: Try Grok proxy URL (Final Attempt)
-                                                    const uuidMatch = preview?.url.match(/post\/([a-f0-9-]{36})/);
-                                                    if (uuidMatch) {
-                                                        const next = `https://grok.com/imagine/post/${uuidMatch[1]}/image?v=3`;
+                                                    const uuid = extractGrokUuid(preview?.url || '');
+                                                    if (uuid) {
+                                                        const next = buildGrokImageUrl(uuid);
                                                         setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
@@ -380,7 +395,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             ) : previewImageError && preview ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-2 text-center">
                                     <Clock size={16} className="text-blue-400 mb-1" />
-                                    <p className="font-bold text-gray-200 text-[10px] mb-2 leading-tight">Preview Pending</p>
+                                    <p className="font-bold text-gray-200 text-[10px] mb-2 leading-tight">公開化待ち</p>
                                     <div className="w-full space-y-1.5 px-1">
                                         <a
                                             href={preview.url}
@@ -388,15 +403,13 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             rel="noopener noreferrer"
                                             className="block w-full text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 py-1.5 rounded-lg text-[9px] font-bold border border-blue-500/20 transition-colors"
                                         >
-                                            1. 元ページを開く
+                                            1. Grokを開く
                                         </a>
                                         <button
                                             onClick={() => {
-                                                const uuidMatch = preview.url.match(/post\/([a-f0-9-]{36})/);
-                                                if (uuidMatch) {
-                                                    const uuid = uuidMatch[1];
-                                                    const resetUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}_thumbnail.jpg?t=${Date.now()}`;
-                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: resetUrl }) : null);
+                                                const uuid = extractGrokUuid(preview.url);
+                                                if (uuid) {
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: buildGrokImageUrl(uuid, true) }) : null);
                                                 } else {
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}` }) : null);
                                                 }
@@ -404,7 +417,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                             }}
                                             className="block w-full text-green-400 bg-green-500/10 hover:bg-green-500/20 py-1.5 rounded-lg text-[9px] font-bold border border-green-500/20 transition-colors"
                                         >
-                                            2. 再読み込み
+                                            2. 再確認
                                         </button>
                                     </div>
                                 </div>
@@ -425,8 +438,18 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none h-20 sm:h-28 resize-none transition-all placeholder-gray-500 text-sm leading-relaxed shadow-inner scrollbar-thin scrollbar-thumb-gray-700"
                         />
                         <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
-                            Grok元プロンプトは投稿後に順次取得されます。取得には時間がかかる場合や、取得できない場合があります。
+                            Grok元プロンプトは投稿後に順次取得されます。Grok側でシェアまたはXに投稿済みの場合に取得可能です。取得には時間がかかる場合があります。
                         </p>
+                        {previewImageError && preview && (
+                            <div className="mt-2 rounded-xl border border-blue-500/30 bg-blue-950/30 px-3 py-2 text-[11px] leading-relaxed text-blue-100">
+                                <div className="flex items-start gap-2">
+                                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-blue-300" />
+                                    <p>
+                                        Grok側で「シェア」または「Xに投稿」を押すと、サムネイル・動画・元プロンプトを取得できる状態になります。投稿はこのまま可能ですが、公開化前は表示やプロンプト取得が失敗することがあります。
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {error && <p className="text-red-400 text-xs mt-2 font-medium">{error}</p>}
 

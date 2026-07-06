@@ -18,7 +18,7 @@ function parseArgs(argv) {
     apply: false,
     all: false,
     applyNsfw: false,
-    retryAccessDenied: false,
+    retryAccessDenied: true,
     includePrompt: false,
     limit: 50,
     delayMs: 750,
@@ -31,6 +31,7 @@ function parseArgs(argv) {
     else if (arg === '--all') args.all = true;
     else if (arg === '--apply-nsfw') args.applyNsfw = true;
     else if (arg === '--retry-access-denied') args.retryAccessDenied = true;
+    else if (arg === '--no-retry-access-denied') args.retryAccessDenied = false;
     else if (arg === '--include-prompt') args.includePrompt = true;
     else if (arg === '--limit') args.limit = Number(argv[++i]);
     else if (arg.startsWith('--limit=')) args.limit = Number(arg.split('=')[1]);
@@ -61,8 +62,9 @@ Usage:
   node scripts/fetch_grok_prompts.js --apply --limit 50 --delay-ms 750
 
 Default target:
-  pending and failed rows only.
-  Terminal statuses are skipped: fetched, no_prompt, source_missing, access_denied.
+  pending, failed, and access_denied rows.
+  access_denied means the Grok post may not be publicly shared yet, so it is retried.
+  Terminal statuses are skipped: fetched, no_prompt, source_missing.
 
 Options:
   --apply                Update public.posts.
@@ -70,7 +72,8 @@ Options:
   --limit N              Maximum rows to process. Default: 50, max: 500.
   --delay-ms N           Delay between Grok API calls. Default: 750.
   --all                  Include every row regardless of current fetch status.
-  --retry-access-denied  Include access_denied rows in the normal target set.
+  --retry-access-denied     Include access_denied rows in the normal target set. This is the default.
+  --no-retry-access-denied  Skip access_denied rows.
   --apply-nsfw           When Grok rRated is true, set posts.nsfw = true. Never sets false.
   --include-prompt       Include full prompt text in the local JSON report. Do not use in CI.
 `);
@@ -157,7 +160,14 @@ async function loadTargets(client, args) {
         created_at
       from public.posts
       ${where}
-      order by created_at desc
+      order by
+        case coalesce(prompt_fetch_status, 'pending')
+          when 'pending' then 0
+          when 'failed' then 1
+          when 'access_denied' then 2
+          else 3
+        end,
+        created_at desc
       ${limit}
     `,
     params,
@@ -272,7 +282,9 @@ function createReport(args) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (parseBoolean(process.env.APPLY_NSFW)) args.applyNsfw = true;
-  if (parseBoolean(process.env.RETRY_ACCESS_DENIED)) args.retryAccessDenied = true;
+  if (process.env.RETRY_ACCESS_DENIED !== undefined && process.env.RETRY_ACCESS_DENIED !== '') {
+    args.retryAccessDenied = parseBoolean(process.env.RETRY_ACCESS_DENIED);
+  }
 
   const report = createReport(args);
   const client = new Client({
