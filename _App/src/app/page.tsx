@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy, Share2 } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy, Share2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
@@ -34,6 +34,7 @@ export default function Home() {
   // activeVideoPostId は廃止済み（詳細モーダルに統合）。互換性のため残さず完全削除。
   const [activePromptPostId, setActivePromptPostId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
+  const [promptRetryingPostId, setPromptRetryingPostId] = useState<string | null>(null);
   // URLパラメータ（?postId=XXX）経由で直接開かれた投稿データを保持するステート
   // 一覧（posts）に含まれない投稿でも詳細モーダルを表示可能にするために使用
   const [directPost, setDirectPost] = useState<Post | null>(null);
@@ -45,7 +46,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.11.2';
+  const APP_VERSION = 'v1.11.3';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -290,6 +291,35 @@ export default function Home() {
       console.error('Failed to increment view:', err);
       // Revert optimism if failed
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, views: post.views } : p));
+    }
+  };
+
+  const handleRequestPromptRetry = async (post: Post) => {
+    setPromptRetryingPostId(post.id);
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({
+          prompt_fetch_status: 'pending',
+          prompt_fetch_error: null,
+          prompt_fetched_at: null,
+        })
+        .eq('id', post.id);
+
+      if (error) throw error;
+
+      const retryPatch = {
+        prompt_fetch_status: 'pending',
+        prompt_fetch_error: null,
+        prompt_fetched_at: null,
+      };
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, ...retryPatch } : p));
+      setDirectPost(prev => prev?.id === post.id ? { ...prev, ...retryPatch } : prev);
+    } catch (err) {
+      console.error('Failed to request prompt retry:', err);
+      alert('再取得依頼に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setPromptRetryingPostId(null);
     }
   };
   // activePromptPostは一覧（posts）から探し、見つからなければ直接フェッチした投稿（directPost）を使用する
@@ -750,6 +780,26 @@ export default function Home() {
                       </span>
                     )}
                   </p>
+
+                  {!originalPrompt && promptStatus === 'access_denied' && (
+                    <div className="mb-6 rounded-lg border border-blue-900/40 bg-blue-950/20 p-3 text-xs text-blue-100">
+                      <button
+                        type="button"
+                        onClick={() => handleRequestPromptRetry(activePromptPost)}
+                        disabled={promptRetryingPostId === activePromptPost.id}
+                        className="mb-2 inline-flex items-center gap-1.5 rounded border border-blue-700 bg-blue-900/50 px-3 py-1.5 font-bold text-blue-100 transition-colors hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <RefreshCw
+                          size={13}
+                          className={promptRetryingPostId === activePromptPost.id ? 'animate-spin' : ''}
+                        />
+                        公開化済み・再取得を依頼
+                      </button>
+                      <p className="leading-relaxed text-blue-200/80">
+                        Grok側で「シェア」または「Xに投稿」を押した後に使用してください。次回の自動取得で元プロンプトを再確認します。
+                      </p>
+                    </div>
+                  )}
 
                   <div className="border-t border-gray-800 pt-5 mb-6">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight mb-3">

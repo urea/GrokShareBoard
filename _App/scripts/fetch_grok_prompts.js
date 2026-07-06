@@ -18,7 +18,7 @@ function parseArgs(argv) {
     apply: false,
     all: false,
     applyNsfw: false,
-    retryAccessDenied: true,
+    retryAccessDenied: false,
     includePrompt: false,
     limit: 50,
     delayMs: 750,
@@ -62,9 +62,8 @@ Usage:
   node scripts/fetch_grok_prompts.js --apply --limit 50 --delay-ms 750
 
 Default target:
-  pending, failed, and access_denied rows.
-  access_denied means the Grok post may not be publicly shared yet, so it is retried.
-  Terminal statuses are skipped: fetched, no_prompt, source_missing.
+  pending and failed rows only.
+  Terminal statuses are skipped: fetched, no_prompt, source_missing, access_denied.
 
 Options:
   --apply                Update public.posts.
@@ -72,7 +71,7 @@ Options:
   --limit N              Maximum rows to process. Default: 50, max: 500.
   --delay-ms N           Delay between Grok API calls. Default: 750.
   --all                  Include every row regardless of current fetch status.
-  --retry-access-denied     Include access_denied rows in the normal target set. This is the default.
+  --retry-access-denied     Include access_denied rows in the normal target set.
   --no-retry-access-denied  Skip access_denied rows.
   --apply-nsfw           When Grok rRated is true, set posts.nsfw = true. Never sets false.
   --include-prompt       Include full prompt text in the local JSON report. Do not use in CI.

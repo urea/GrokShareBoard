@@ -55,6 +55,6 @@
 
 ### Grok元プロンプトの定期取得
 
-`.github/workflows/fetch-grok-prompts.yml` が1時間ごとに実行され、`posts.prompt_fetch_status` が `pending`、`failed`、`access_denied` の投稿を対象にGrok側APIから元プロンプトを取得します。`access_denied` はGrok側で公開化されていない投稿の可能性があるため、公開化後に拾えるよう通常の再取得対象に含めます。`no_prompt`、`source_missing` は終端ステータスとして通常の再取得対象から外します。
+`.github/workflows/fetch-grok-prompts.yml` が1時間ごとに実行され、`posts.prompt_fetch_status` が `pending` または `failed` の投稿を対象にGrok側APIから元プロンプトを取得します。`access_denied` はGrok側で公開化されていない可能性が高いため、通常の再取得対象から外します。ユーザーがGrok側で「シェア」または「Xに投稿」を押した後、詳細画面の「公開化済み・再取得を依頼」ボタンで `pending` に戻すことで、次回の自動取得対象になります。`no_prompt`、`source_missing` も終端ステータスとして通常の再取得対象から外します。
 
 このワークフローにはGitHub repository secret `DATABASE_URL` が必要です。Actionsログにプロンプト本文は出力せず、取得件数・HTTPステータス・本文長・ハッシュのみを記録します。
