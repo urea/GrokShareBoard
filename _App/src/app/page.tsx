@@ -46,7 +46,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.11.3';
+  const APP_VERSION = 'v1.11.4';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -787,6 +787,7 @@ export default function Home() {
                         type="button"
                         onClick={() => handleRequestPromptRetry(activePromptPost)}
                         disabled={promptRetryingPostId === activePromptPost.id}
+                        title="Grok側で公開化済みの場合のみ、元プロンプトの再取得対象に戻します"
                         className="mb-2 inline-flex items-center gap-1.5 rounded border border-blue-700 bg-blue-900/50 px-3 py-1.5 font-bold text-blue-100 transition-colors hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
                       >
                         <RefreshCw
