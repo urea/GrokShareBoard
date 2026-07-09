@@ -90,7 +90,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.12.0';
+  const APP_VERSION = 'v1.12.1';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -748,7 +748,7 @@ export default function Home() {
         return (
           <ModalPortal>
             <div
-              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm group"
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm group"
               onClick={(e) => {
                 e.stopPropagation();
                 setActivePromptPostId(null);
@@ -768,18 +768,18 @@ export default function Home() {
 
               <div
                 data-testid="post-detail-modal"
-                className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative"
+                className="bg-gray-900 border border-gray-700 rounded-xl w-[96vw] max-w-[1920px] max-h-[94vh] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(460px,640px)] overflow-hidden shadow-2xl relative"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Left/Top Section: Media Viewer */}
-                <div className="w-full md:w-3/5 bg-black flex items-center justify-center relative min-h-[30vh] md:min-h-0 border-b md:border-b-0 md:border-r border-gray-800">
+                <div className="w-full lg:w-auto lg:min-w-0 bg-black flex items-center justify-center relative min-h-[32vh] lg:min-h-0 border-b lg:border-b-0 lg:border-r border-gray-800">
                   {activePromptPost.video_url && activePromptPost.video_url.includes('.mp4') && !videoError ? (
                     <video
                       key={`modal-video-${activePromptPost.id}`}
                       src={activePromptPost.video_url}
                       autoPlay
                       controls
-                      className="w-full h-full object-contain max-h-[40vh] md:max-h-[90vh]"
+                      className="w-full h-full object-contain max-h-[42vh] lg:max-h-[94vh]"
                       onError={() => setVideoError(true)}
                     />
                   ) : (
@@ -787,7 +787,7 @@ export default function Home() {
                       key={`modal-img-${activePromptPost.id}`}
                       src={activePromptPost.image_url ? activePromptPost.image_url.replace('_thumbnail.jpg', '.jpg') : getValidImageUrl(activePromptPost.image_url)}
                       alt={description || currentPrompt || 'Grok generation image'}
-                      className="w-full h-full object-contain max-h-[40vh] md:max-h-[90vh]"
+                      className="w-full h-full object-contain max-h-[42vh] lg:max-h-[94vh]"
                       onError={(e) => {
                         const displayImage = getValidImageUrl(activePromptPost.image_url);
                         const target = e.currentTarget;
@@ -802,7 +802,7 @@ export default function Home() {
                 </div>
 
                 {/* Right/Bottom Section: Info & Comments */}
-                <div className="w-full md:w-2/5 p-4 sm:p-6 overflow-y-auto max-h-[50vh] md:max-h-[90vh] flex flex-col bg-gray-900">
+                <div className="w-full lg:w-auto lg:min-w-[460px] p-4 sm:p-6 overflow-y-auto max-h-[56vh] lg:max-h-[94vh] flex flex-col bg-gray-900">
                   {/* Header Section */}
                   <div className="flex justify-between items-start gap-2 mb-4 shrink-0">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight pt-1">
