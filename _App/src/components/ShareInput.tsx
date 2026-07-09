@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, X, Loader2, Image as ImageIcon, AlertTriangle, Sparkles, RefreshCw, Trash2, Edit, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, Image as ImageIcon, AlertTriangle, Sparkles, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Define local interface for Preview Data
@@ -32,6 +32,15 @@ function isGrokImageProxyUrl(value: string) {
     } catch {
         return value.includes('grok.com/imagine/post/') && value.includes('/image');
     }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && error && 'message' in error) {
+        const message = (error as { message?: unknown }).message;
+        if (typeof message === 'string') return message;
+    }
+    return fallback;
 }
 
 export default function ShareInput({ onPostCreated }: { onPostCreated: () => void }) {
@@ -76,7 +85,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             }
 
             // Check if URL already exists in DB
-            const { data: existingPost, error: fetchError } = await supabase
+            const { data: existingPost } = await supabase
                 .from('posts')
                 .select('*')
                 .eq('url', url)
@@ -133,8 +142,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
 
             setPreview(mockPreview);
 
-        } catch (err: any) {
-            setError(err.message || 'Error analyzing URL');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Error analyzing URL'));
             console.error(err);
         } finally {
             setLoading(false);
@@ -185,8 +194,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setIsEditing(false);
             onPostCreated(); // Refresh feed
             alert('投稿を更新しました / Post updated successfully!');
-        } catch (err: any) {
-            setError(err.message || 'Error updating post');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Error updating post'));
         } finally {
             setLoading(false);
         }
@@ -214,8 +223,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setIsEditing(false);
             onPostCreated(); // Refresh feed
             alert('投稿を削除しました / Post deleted successfully!');
-        } catch (err: any) {
-            setError(err.message || 'Error deleting post');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'Error deleting post'));
         } finally {
             setLoading(false);
         }
@@ -278,8 +287,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             setEditableDescription('');
             setIsNsfw(false);
             onPostCreated();
-        } catch (err: any) {
-            setError('投稿エラー / ' + (err.message || 'Error sharing post'));
+        } catch (err: unknown) {
+            setError('投稿エラー / ' + getErrorMessage(err, 'Error sharing post'));
         } finally {
             setLoading(false);
         }
@@ -306,7 +315,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                     if (urlObj.hostname === 'grok.com' && urlObj.pathname.startsWith('/imagine/post/')) {
                                         inputUrl = `${urlObj.origin}${urlObj.pathname}`;
                                     }
-                                } catch (err) {
+                                } catch {
                                     // Ignore if not a valid URL yet
                                 }
                                 setUrl(inputUrl);
@@ -446,7 +455,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                             className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none h-20 sm:h-28 resize-none transition-all placeholder-gray-500 text-sm leading-relaxed shadow-inner scrollbar-thin scrollbar-thumb-gray-700"
                         />
                         <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
-                            投稿前にGrok側で「シェア」または「Xに投稿」を押して公開化してください。公開化確認後に投稿できます。元プロンプト取得には時間がかかる場合があります。
+                            投稿前にGrok側で「シェア」または「Xに投稿」を押して公開化してください。公開化確認後に投稿できます。動画プロンプト・元画像プロンプトの取得には時間がかかる場合があります。
                         </p>
                         {preview && !previewImageError && !isEditing && (
                             <p className="mt-2 text-[11px] font-bold text-green-400">

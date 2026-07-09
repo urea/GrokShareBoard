@@ -1,22 +1,63 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, MousePointer2, MessageSquare, Eye, ChevronLeft, ChevronRight, LifeBuoy, Share2, RefreshCw } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, ChevronLeft, ChevronRight, LifeBuoy, Share2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { Post } from '@/types';
+import { Post, PostPromptSource, PostSearchRow } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
 import AffiliateBanner from '@/components/AffiliateBanner';
 import CommentSection from '@/components/CommentSection';
 import { createPortal } from 'react-dom';
 
 function ModalPortal({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+  if (typeof document === 'undefined') return null;
   return createPortal(children, document.body);
+}
+
+function getPromptStatusMessage(status: string | null | undefined, targetLabel = 'Grok元プロンプト') {
+  switch (status || 'pending') {
+    case 'no_prompt':
+      return `${targetLabel}はありません。`;
+    case 'source_missing':
+      return 'Grok側で投稿またはメディアが見つからないため、プロンプトを取得できません。';
+    case 'access_denied':
+      return 'Grok側で公開化されていないため、プロンプトを取得できません。Grokで「シェア」または「Xに投稿」を押すと、次回の自動取得で反映される場合があります。';
+    case 'failed':
+      return `${targetLabel}を取得できませんでした。`;
+    default:
+      return `${targetLabel}は取得待ちです。取得には時間がかかる場合があります。`;
+  }
+}
+
+function toPosts(rows: PostSearchRow[]): Post[] {
+  return rows.map((row) => {
+    const post = { ...row } as Partial<PostSearchRow>;
+    delete post.source_prompt_text;
+    return post as Post;
+  });
+}
+
+async function copyTextToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!copied) throw new Error('Clipboard write was blocked.');
+  }
 }
 
 export default function Home() {
@@ -35,6 +76,9 @@ export default function Home() {
   const [activePromptPostId, setActivePromptPostId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [promptRetryingPostId, setPromptRetryingPostId] = useState<string | null>(null);
+  const [promptSourcesByPostId, setPromptSourcesByPostId] = useState<Record<string, PostPromptSource[]>>({});
+  const [promptSourcesLoadingPostId, setPromptSourcesLoadingPostId] = useState<string | null>(null);
+  const [copiedPromptKey, setCopiedPromptKey] = useState<string | null>(null);
   // URLパラメータ（?postId=XXX）経由で直接開かれた投稿データを保持するステート
   // 一覧（posts）に含まれない投稿でも詳細モーダルを表示可能にするために使用
   const [directPost, setDirectPost] = useState<Post | null>(null);
@@ -46,7 +90,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.11.5';
+  const APP_VERSION = 'v1.12.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -54,7 +98,7 @@ export default function Home() {
 
     try {
       let query = supabase
-        .from('posts')
+        .from('posts_search_index')
         .select('*')
         .range(pageNumber * POSTS_PER_PAGE, (pageNumber + 1) * POSTS_PER_PAGE - 1);
 
@@ -80,7 +124,7 @@ export default function Home() {
 
       if (searchQuery.trim()) {
         const q = searchQuery.trim();
-        query = query.or(`prompt.ilike.%${q}%,description.ilike.%${q}%,user_id.ilike.%${q}%`);
+        query = query.or(`prompt.ilike.%${q}%,description.ilike.%${q}%,user_id.ilike.%${q}%,source_prompt_text.ilike.%${q}%`);
       }
 
       const { data, error } = await query;
@@ -88,7 +132,7 @@ export default function Home() {
       if (error) {
         console.error('Error fetching posts:', error);
       } else {
-        const newPosts = data || [];
+        const newPosts = toPosts((data || []) as PostSearchRow[]);
 
         if (isNewSearch || pageNumber === 0) {
           setPosts(newPosts);
@@ -315,6 +359,11 @@ export default function Home() {
       };
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, ...retryPatch } : p));
       setDirectPost(prev => prev?.id === post.id ? { ...prev, ...retryPatch } : prev);
+      setPromptSourcesByPostId(prev => {
+        const next = { ...prev };
+        delete next[post.id];
+        return next;
+      });
     } catch (err) {
       console.error('Failed to request prompt retry:', err);
       alert('再取得依頼に失敗しました。時間をおいて再度お試しください。');
@@ -325,6 +374,57 @@ export default function Home() {
   // activePromptPostは一覧（posts）から探し、見つからなければ直接フェッチした投稿（directPost）を使用する
   // これにより、?postId=XXXで直接アクセスされた場合でも、一覧に該当投稿がなくても詳細モーダルを表示できる
   const activePromptPost = posts.find(p => p.id === activePromptPostId) || (directPost?.id === activePromptPostId ? directPost : undefined);
+
+  useEffect(() => {
+    if (!activePromptPostId || promptSourcesByPostId[activePromptPostId]) return;
+
+    let cancelled = false;
+    setPromptSourcesLoadingPostId(activePromptPostId);
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('post_prompt_sources')
+          .select('*')
+          .eq('post_id', activePromptPostId)
+          .order('depth', { ascending: true });
+
+        if (cancelled) return;
+        if (error) {
+          console.error('Failed to fetch prompt sources:', error);
+          setPromptSourcesByPostId(prev => ({ ...prev, [activePromptPostId]: [] }));
+        } else {
+          setPromptSourcesByPostId(prev => ({
+            ...prev,
+            [activePromptPostId]: (data || []) as PostPromptSource[],
+          }));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Unexpected prompt source fetch error:', err);
+          setPromptSourcesByPostId(prev => ({ ...prev, [activePromptPostId]: [] }));
+        }
+      } finally {
+        if (!cancelled) setPromptSourcesLoadingPostId(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePromptPostId, promptSourcesByPostId]);
+
+  const handleCopyPrompt = (key: string, prompt: string) => {
+    if (!prompt) return;
+    copyTextToClipboard(prompt).then(() => {
+      setCopiedPromptKey(key);
+      window.setTimeout(() => {
+        setCopiedPromptKey(prev => prev === key ? null : prev);
+      }, 1600);
+    }).catch((err) => {
+      console.error('Failed to copy prompt:', err);
+    });
+  };
 
   // Helper for generating correct thumbnail string
   const getValidImageUrl = (url: string | null) => {
@@ -459,7 +559,7 @@ export default function Home() {
                   <p>
                     自分が作った作品はもちろん、SNSで見かけた「これ良い！」という他人の作品も、URLを貼るだけで気軽にストック・共有できます。
                     <br />
-                    <span className="opacity-70 text-[10px]">You can archive any Grok URL, whether it's your own work or something great you found on X.</span>
+                    <span className="opacity-70 text-[10px]">You can archive any Grok URL, whether it&apos;s your own work or something great you found on X.</span>
                   </p>
                 </div>
                 <ShareInput onPostCreated={() => {
@@ -499,7 +599,7 @@ export default function Home() {
                   <p className="font-bold text-blue-400/80 mb-1">編集・削除について / How to Edit or Delete</p>
                   <p className="text-xs">
                     編集・削除したい場合は、再度そのGrok URLを入力して「読み込み」を押してください。
-                    <span className="opacity-70 text-[10px] ml-2">(To edit or delete, re-enter the URL and click "Load".)</span>
+                    <span className="opacity-70 text-[10px] ml-2">(To edit or delete, re-enter the URL and click &quot;Load&quot;.)</span>
                   </p>
                 </div>
 
@@ -635,25 +735,16 @@ export default function Home() {
         const currentIndex = posts.findIndex(p => p.id === activePromptPostId);
         const hasPrev = currentIndex > 0;
         const hasNext = currentIndex < posts.length - 1;
-        const originalPrompt = activePromptPost.prompt_fetch_status === 'fetched' && activePromptPost.prompt?.trim()
+        const currentPrompt = activePromptPost.prompt_fetch_status === 'fetched' && activePromptPost.prompt?.trim()
           ? activePromptPost.prompt
           : '';
         const description = activePromptPost.description?.trim() || '';
         const promptStatus = activePromptPost.prompt_fetch_status || 'pending';
-        const promptStatusMessage = (() => {
-          switch (promptStatus) {
-            case 'no_prompt':
-              return 'Grok元プロンプトはありません。';
-            case 'source_missing':
-              return 'Grok側で投稿またはメディアが見つからないため、元プロンプトを取得できません。';
-            case 'access_denied':
-              return 'Grok側で公開化されていないため、元プロンプトを取得できません。Grokで「シェア」または「Xに投稿」を押すと、次回の自動取得で反映される場合があります。';
-            case 'failed':
-              return 'Grok元プロンプトを取得できませんでした。';
-            default:
-              return 'Grok元プロンプトは取得待ちです。取得には時間がかかる場合があります。';
-          }
-        })();
+        const promptSources = promptSourcesByPostId[activePromptPost.id] || [];
+        const promptSourcesLoading = promptSourcesLoadingPostId === activePromptPost.id;
+        const currentPromptLabel = activePromptPost.video_url?.includes('.mp4')
+          ? '動画プロンプト / Video Prompt'
+          : '画像プロンプト / Image Prompt';
         return (
           <ModalPortal>
             <div
@@ -676,6 +767,7 @@ export default function Home() {
               )}
 
               <div
+                data-testid="post-detail-modal"
                 className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -694,7 +786,7 @@ export default function Home() {
                     <img
                       key={`modal-img-${activePromptPost.id}`}
                       src={activePromptPost.image_url ? activePromptPost.image_url.replace('_thumbnail.jpg', '.jpg') : getValidImageUrl(activePromptPost.image_url)}
-                      alt={description || originalPrompt || 'Grok generation image'}
+                      alt={description || currentPrompt || 'Grok generation image'}
                       className="w-full h-full object-contain max-h-[40vh] md:max-h-[90vh]"
                       onError={(e) => {
                         const displayImage = getValidImageUrl(activePromptPost.image_url);
@@ -714,7 +806,7 @@ export default function Home() {
                   {/* Header Section */}
                   <div className="flex justify-between items-start gap-2 mb-4 shrink-0">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight pt-1">
-                      Grok元プロンプト<br className="sm:hidden" /><span className="hidden sm:inline"> / Original Prompt</span>
+                      プロンプト情報<br className="sm:hidden" /><span className="hidden sm:inline"> / Prompts</span>
                     </h3>
                     <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2 items-center">
                       <a
@@ -724,7 +816,7 @@ export default function Home() {
                         onClick={async () => {
                           try {
                             await supabase.rpc('increment_click', { post_id: activePromptPost.id });
-                          } catch (err) { }
+                          } catch { }
                         }}
                         className="flex items-center gap-1 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 bg-gray-800 hover:bg-gray-700 px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap"
                       >
@@ -746,26 +838,6 @@ export default function Home() {
                         <Share2 size={12} className="sm:w-3.5 sm:h-3.5" /> Share
                       </button>
                       <button
-                        onClick={() => {
-                          if (!originalPrompt) return;
-                          navigator.clipboard.writeText(originalPrompt);
-                          const btn = document.getElementById('copy-btn-' + activePromptPost.id);
-                          if (btn) {
-                            const originalText = btn.innerHTML;
-                            btn.innerHTML = '<span class="text-green-400 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> OK</span>';
-                            setTimeout(() => { btn.innerHTML = originalText; }, 2000);
-                          }
-                        }}
-                        id={`copy-btn-${activePromptPost.id}`}
-                        disabled={!originalPrompt}
-                        className={`flex items-center gap-1 text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded border border-gray-700 transition-colors whitespace-nowrap ${originalPrompt
-                          ? 'text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700'
-                          : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'
-                          }`}
-                      >
-                        <Copy size={12} className="sm:w-3.5 sm:h-3.5" /> Copy
-                      </button>
-                      <button
                         onClick={() => setActivePromptPostId(null)}
                         className="text-gray-400 hover:text-white p-1 ml-1 sm:ml-2"
                       >
@@ -773,34 +845,126 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed mb-6">
-                    {originalPrompt || (
-                      <span className="text-gray-500 italic">
-                        {promptStatusMessage}
-                      </span>
-                    )}
-                  </p>
 
-                  {!originalPrompt && promptStatus === 'access_denied' && (
-                    <div className="mb-6 rounded-lg border border-blue-900/40 bg-blue-950/20 p-3 text-xs text-blue-100">
-                      <button
-                        type="button"
-                        onClick={() => handleRequestPromptRetry(activePromptPost)}
-                        disabled={promptRetryingPostId === activePromptPost.id}
-                        title="Grok側で公開化済みの場合のみ、元プロンプトの再取得対象に戻します"
-                        className="mb-2 inline-flex items-center gap-1.5 rounded border border-blue-700 bg-blue-900/50 px-3 py-1.5 font-bold text-blue-100 transition-colors hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
-                      >
-                        <RefreshCw
-                          size={13}
-                          className={promptRetryingPostId === activePromptPost.id ? 'animate-spin' : ''}
-                        />
-                        公開化済み・再取得を依頼
-                      </button>
-                      <p className="leading-relaxed text-blue-200/80">
-                        Grok側で「シェア」または「Xに投稿」を押した後に使用してください。次回の自動取得で元プロンプトを再確認します。
+                  <div className="space-y-4 mb-6">
+                    <div data-testid="current-prompt-card" className="rounded-lg border border-gray-800 bg-gray-950/30 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold leading-tight text-gray-300">
+                          {currentPromptLabel}
+                        </h4>
+                        <button
+                          data-testid="copy-current-prompt"
+                          type="button"
+                          onClick={() => handleCopyPrompt(`current-${activePromptPost.id}`, currentPrompt)}
+                          disabled={!currentPrompt}
+                          className={`inline-flex shrink-0 items-center gap-1 rounded border border-gray-700 px-2 py-1 text-[10px] transition-colors ${currentPrompt
+                            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                            : 'cursor-not-allowed bg-gray-800/50 text-gray-600'
+                            }`}
+                        >
+                          <Copy size={11} />
+                          {copiedPromptKey === `current-${activePromptPost.id}` ? 'OK' : 'Copy'}
+                        </button>
+                      </div>
+                      <p className="text-sm leading-relaxed text-gray-100 whitespace-pre-wrap">
+                        {currentPrompt || (
+                          <span className="text-gray-500 italic">
+                            {getPromptStatusMessage(promptStatus, 'この投稿のプロンプト')}
+                          </span>
+                        )}
                       </p>
+
+                      {!currentPrompt && promptStatus === 'access_denied' && (
+                        <div className="mt-3 rounded-lg border border-blue-900/40 bg-blue-950/20 p-3 text-xs text-blue-100">
+                          <button
+                            type="button"
+                            onClick={() => handleRequestPromptRetry(activePromptPost)}
+                            disabled={promptRetryingPostId === activePromptPost.id}
+                            title="Grok側で公開化済みの場合のみ、元プロンプトの再取得対象に戻します"
+                            className="mb-2 inline-flex items-center gap-1.5 rounded border border-blue-700 bg-blue-900/50 px-3 py-1.5 font-bold text-blue-100 transition-colors hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
+                          >
+                            <RefreshCw
+                              size={13}
+                              className={promptRetryingPostId === activePromptPost.id ? 'animate-spin' : ''}
+                            />
+                            公開化済み・再取得を依頼
+                          </button>
+                          <p className="leading-relaxed text-blue-200/80">
+                            Grok側で「シェア」または「Xに投稿」を押した後に使用してください。次回の自動取得でプロンプトを再確認します。
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {promptSourcesLoading && (
+                      <div className="rounded-lg border border-gray-800 bg-gray-950/20 p-3 text-xs text-gray-500">
+                        元画像・上位プロンプトを確認しています。
+                      </div>
+                    )}
+
+                    {!promptSourcesLoading && promptSources.length === 0 && (
+                      <div className="rounded-lg border border-gray-800 bg-gray-950/20 p-3 text-xs text-gray-500">
+                        元画像・上位プロンプトは未取得、または未検出です。
+                      </div>
+                    )}
+
+                    {promptSources.map((source) => {
+                      const sourcePrompt = source.prompt_fetch_status === 'fetched' && source.prompt?.trim()
+                        ? source.prompt
+                        : '';
+                      const sourceCopyKey = `source-${activePromptPost.id}-${source.depth}`;
+                      const isDirectSource = source.depth === 1;
+                      const isImageSource = source.media_type?.includes('IMAGE');
+                      const sourceLabel = isDirectSource
+                        ? (isImageSource ? '元画像プロンプト / Source Image Prompt' : '元投稿プロンプト / Source Prompt')
+                        : `上位プロンプト ${source.depth} / Ancestor Prompt`;
+                      const sourceUrl = `https://grok.com/imagine/post/${source.grok_post_id}`;
+
+                      return (
+                        <div key={sourceCopyKey} data-testid={`prompt-source-card-${source.depth}`} className="rounded-lg border border-gray-800 bg-gray-950/30 p-3">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold leading-tight text-gray-300">
+                                {sourceLabel}
+                              </h4>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                <span>depth {source.depth}</span>
+                                {source.media_type && <span>{source.media_type.replace('MEDIA_POST_TYPE_', '')}</span>}
+                                <a
+                                  href={sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                                >
+                                  <ExternalLink size={10} /> Grok
+                                </a>
+                              </div>
+                            </div>
+                            <button
+                              data-testid={`copy-source-prompt-${source.depth}`}
+                              type="button"
+                              onClick={() => handleCopyPrompt(sourceCopyKey, sourcePrompt)}
+                              disabled={!sourcePrompt}
+                              className={`inline-flex shrink-0 items-center gap-1 rounded border border-gray-700 px-2 py-1 text-[10px] transition-colors ${sourcePrompt
+                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                                : 'cursor-not-allowed bg-gray-800/50 text-gray-600'
+                                }`}
+                            >
+                              <Copy size={11} />
+                              {copiedPromptKey === sourceCopyKey ? 'OK' : 'Copy'}
+                            </button>
+                          </div>
+                          <p className="text-sm leading-relaxed text-gray-100 whitespace-pre-wrap">
+                            {sourcePrompt || (
+                              <span className="text-gray-500 italic">
+                                {getPromptStatusMessage(source.prompt_fetch_status, '上位プロンプト')}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   <div className="border-t border-gray-800 pt-5 mb-6">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 leading-tight mb-3">

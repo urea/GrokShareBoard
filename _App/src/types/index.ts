@@ -22,6 +22,24 @@ export interface Post {
     created_at: string;
 }
 
+export interface PostSearchRow extends Post {
+    source_prompt_text: string | null;
+}
+
+export interface PostPromptSource {
+    post_id: string;
+    depth: number;
+    grok_post_id: string;
+    parent_grok_post_id: string | null;
+    media_type: string | null;
+    prompt: string | null;
+    prompt_fetch_status: string | null;
+    prompt_fetch_error: string | null;
+    prompt_fetched_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Comment {
     id: string;
     post_id: string;
