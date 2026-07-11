@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { Copy, MousePointer2, MessageSquare, ExternalLink, Eye, Play, Trash2, Share2 } from 'lucide-react';
+import { MousePointer2, MessageSquare, ExternalLink, Eye, Info, Play, Trash2, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { createPortal } from 'react-dom';
-import CommentSection from './CommentSection';
 
 interface VideoCardProps {
     post: Post;
@@ -17,6 +15,15 @@ interface VideoCardProps {
     onOpenVideo?: () => void;
     onOpenDetails?: () => void;
     onDelete?: (postId: string) => void;
+}
+
+const metricCountFormatter = new Intl.NumberFormat('ja-JP', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+});
+
+function formatMetricCount(value: number | null) {
+    return metricCountFormatter.format(value ?? 0);
 }
 
 export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate, onOpenVideo, onOpenDetails, onDelete }: VideoCardProps) {
@@ -161,87 +168,102 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     {displayText}
                                 </p>
                             )}
-                            <div className="flex flex-wrap items-center justify-between gap-1 mt-1">
-                                <div className="flex gap-1.5 items-center h-6">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (onOpenDetails) onOpenDetails();
-                                        }}
-                                        className="h-full flex items-center justify-center text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
-                                    >
-                                        <MessageSquare size={10} className="mr-1" /> 詳細
-                                    </button>
-                                    <a
-                                        href={post.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            try {
-                                                await supabase.rpc('increment_click', { post_id: post.id });
-                                            } catch (err) {
-                                                console.error('Failed to increment click:', err);
-                                            }
-                                        }}
-                                        className="h-full flex items-center gap-1 text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
-                                        title="Open in Grok"
-                                    >
-                                        <ExternalLink size={10} /> Grok
-                                    </a>
-                                    {/* Xシェアボタン: 一覧画面からも直接シェア可能にし、シェア機能の認知向上を図る */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname.split('?')[0].replace(/\/$/, '')}` : '';
-                                            const shareUrl = `${siteUrl}?postId=${post.id}`;
-                                            const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
-                                            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
-                                            window.open(tweetUrl, '_blank', 'noopener,noreferrer');
-                                        }}
-                                        className="h-full flex items-center gap-1 text-[10px] text-blue-300 hover:text-blue-200 bg-black/50 px-2 rounded border border-transparent transition-colors"
-                                        title="\u3053\u306e\u6295\u7a3f\u3092X\uff08Twitter\uff09\u3067\u30b7\u30a7\u30a2"
-                                    >
-                                        <Share2 size={10} /> Share
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 bg-black/40 px-2 h-6 rounded-full border border-white/10 shadow-inner">
-                                    <div className="flex items-center gap-1" title="Comments">
-                                        <MessageSquare size={10} />
-                                        <span>{post.comment_count || 0}</span>
-                                    </div>
-                                    <div className="w-[1px] h-3 bg-white/10" />
-                                    <div className="flex items-center gap-1" title="Views">
-                                        <Eye size={10} />
-                                        <span>{post.views || 0}</span>
-                                    </div>
-                                    <div className="w-[1px] h-3 bg-white/10" />
-                                    <div className="flex items-center gap-1" title="Grok Opens">
-                                        <MousePointer2 size={10} />
-                                        <span>{post.clicks || 0}</span>
-                                    </div>
-                                </div>
-                                {isAdmin && (
-                                    <>
-                                        <button
-                                            onClick={handleAdminNsfwToggle}
-                                            className={`h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border transition-colors ml-1 ${post.nsfw
-                                                ? 'bg-red-600 border-red-400 text-white'
-                                                : 'bg-gray-700 border-gray-500 text-gray-300 hover:bg-gray-600'
-                                                }`}
-                                        >
-                                            ADMIN:{post.nsfw ? 'NSFW' : 'SFW'}
-                                        </button>
-                                        <button
-                                            onClick={handleAdminDelete}
-                                            className="h-6 flex items-center justify-center text-[9px] font-bold px-1.5 rounded border border-red-900 bg-red-950/80 text-red-500 hover:bg-red-700 hover:text-white transition-colors ml-0.5"
-                                            title="強制削除 / Force Delete"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
-                                    </>
-                                )}
+                            <div className="mt-1 grid grid-cols-3 gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (onOpenDetails) onOpenDetails();
+                                    }}
+                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-blue-400/25 bg-blue-500/20 px-1 text-[9px] font-semibold text-blue-100 transition-colors hover:bg-blue-500/30 sm:text-[10px]"
+                                    title="投稿の詳細を見る"
+                                    aria-label="投稿の詳細を見る"
+                                >
+                                    <Info size={11} className="shrink-0" />
+                                    <span className="whitespace-nowrap">詳細</span>
+                                </button>
+                                <a
+                                    href={post.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                            await supabase.rpc('increment_click', { post_id: post.id });
+                                        } catch (err) {
+                                            console.error('Failed to increment click:', err);
+                                        }
+                                    }}
+                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-white/10 bg-black/55 px-1 text-[9px] font-semibold text-gray-100 transition-colors hover:border-blue-400/30 hover:text-blue-200 sm:text-[10px]"
+                                    title="Grokで見る"
+                                    aria-label="Grokで見る"
+                                >
+                                    <ExternalLink size={11} className="shrink-0" />
+                                    <span className="whitespace-nowrap">Grokで見る</span>
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname.split('?')[0].replace(/\/$/, '')}` : '';
+                                        const shareUrl = `${siteUrl}?postId=${post.id}`;
+                                        const shareText = 'GrokShareBoard\u306e\u6295\u7a3f\u3092\u30c1\u30a7\u30c3\u30af\uff01';
+                                        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
+                                        window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+                                    }}
+                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-white/10 bg-black/55 px-1 text-[9px] font-semibold text-gray-100 transition-colors hover:border-sky-400/30 hover:text-sky-200 sm:text-[10px]"
+                                    title="Xで共有"
+                                    aria-label="Xで共有"
+                                >
+                                    <Share2 size={11} className="shrink-0" />
+                                    <span className="whitespace-nowrap">Xで共有</span>
+                                </button>
                             </div>
+                            <div className="grid h-8 grid-cols-3 divide-x divide-white/10 overflow-hidden rounded border border-white/10 bg-black/45 text-gray-300 shadow-inner sm:h-9">
+                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="コメント数">
+                                    <MessageSquare size={10} className="shrink-0 text-gray-400" />
+                                    <span className="flex min-w-0 flex-col leading-none">
+                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.comment_count)}</span>
+                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">コメント</span>
+                                    </span>
+                                </div>
+                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="閲覧数">
+                                    <Eye size={10} className="shrink-0 text-gray-400" />
+                                    <span className="flex min-w-0 flex-col leading-none">
+                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.views)}</span>
+                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">閲覧</span>
+                                    </span>
+                                </div>
+                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="Grokを開いた回数">
+                                    <MousePointer2 size={10} className="shrink-0 text-gray-400" />
+                                    <span className="flex min-w-0 flex-col leading-none">
+                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.clicks)}</span>
+                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">Grok遷移</span>
+                                    </span>
+                                </div>
+                            </div>
+                            {isAdmin && (
+                                <div className="flex justify-end gap-1 pt-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={handleAdminNsfwToggle}
+                                        className={`flex h-6 items-center justify-center rounded border px-1.5 text-[9px] font-bold transition-colors ${post.nsfw
+                                            ? 'border-red-400 bg-red-600 text-white'
+                                            : 'border-gray-500 bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                    >
+                                        ADMIN:{post.nsfw ? 'NSFW' : 'SFW'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleAdminDelete}
+                                        className="flex h-6 items-center justify-center rounded border border-red-900 bg-red-950/80 px-1.5 text-[9px] font-bold text-red-500 transition-colors hover:bg-red-700 hover:text-white"
+                                        title="強制削除 / Force Delete"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -276,7 +298,8 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     }
                                 }}
                                 className="flex items-center gap-1 mr-1 text-gray-400 hover:text-blue-400 transition-colors"
-                                title="Open in Grok"
+                                title="Grokで見る"
+                                aria-label="Grokで見る"
                             >
                                 <ExternalLink size={compact ? 12 : 14} />
                             </a>
@@ -291,15 +314,16 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     window.open(tweetUrl, '_blank', 'noopener,noreferrer');
                                 }}
                                 className="flex items-center gap-1 mr-1 text-gray-400 hover:text-sky-400 transition-colors"
-                                title="\u3053\u306e\u6295\u7a3f\u3092X\uff08Twitter\uff09\u3067\u30b7\u30a7\u30a2"
+                                title="Xで共有"
+                                aria-label="Xで共有"
                             >
                                 <Share2 size={compact ? 12 : 14} />
                             </button>
-                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Views">
+                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="閲覧数">
                                 <Eye size={compact ? 10 : 12} className="text-gray-400" />
                                 <span className="font-medium text-gray-300">{post.views || 0}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Grok Opens">
+                            <div className="flex items-center gap-1.5 opacity-80 bg-gray-800/50 px-2 py-0.5 rounded-full border border-gray-700/50" title="Grokを開いた回数">
                                 <MousePointer2 size={compact ? 10 : 12} className="text-gray-400" />
                                 <span className="font-medium text-gray-300">{post.clicks || 0}</span>
                             </div>
