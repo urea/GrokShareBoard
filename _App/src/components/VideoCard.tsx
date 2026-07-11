@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Post } from '@/types';
-import { MousePointer2, MessageSquare, ExternalLink, Eye, Info, Play, Trash2, Share2 } from 'lucide-react';
+import { MousePointer2, ExternalLink, Eye, Info, Play, Trash2, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface VideoCardProps {
@@ -25,6 +25,8 @@ const metricCountFormatter = new Intl.NumberFormat('ja-JP', {
 function formatMetricCount(value: number | null) {
     return metricCountFormatter.format(value ?? 0);
 }
+
+const overlayActionClassName = 'flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-white/10 bg-black/55 px-1 text-[9px] font-semibold text-gray-100 transition-colors hover:border-white/20 hover:bg-black/70 hover:text-white sm:text-[10px]';
 
 export default function VideoCard({ post, compact = false, overlayStyle = false, isAdmin = false, onUpdate, onOpenVideo, onOpenDetails, onDelete }: VideoCardProps) {
     // Helper to enforce the correct thumbnail pattern [UUID]_thumbnail.jpg
@@ -175,7 +177,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                         e.stopPropagation();
                                         if (onOpenDetails) onOpenDetails();
                                     }}
-                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-blue-400/25 bg-blue-500/20 px-1 text-[9px] font-semibold text-blue-100 transition-colors hover:bg-blue-500/30 sm:text-[10px]"
+                                    className={overlayActionClassName}
                                     title="投稿の詳細を見る"
                                     aria-label="投稿の詳細を見る"
                                 >
@@ -194,7 +196,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                             console.error('Failed to increment click:', err);
                                         }
                                     }}
-                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-white/10 bg-black/55 px-1 text-[9px] font-semibold text-gray-100 transition-colors hover:border-blue-400/30 hover:text-blue-200 sm:text-[10px]"
+                                    className={overlayActionClassName}
                                     title="Grokで見る"
                                     aria-label="Grokで見る"
                                 >
@@ -211,7 +213,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&hashtags=GrokShareBoard`;
                                         window.open(tweetUrl, '_blank', 'noopener,noreferrer');
                                     }}
-                                    className="flex h-7 min-w-0 items-center justify-center gap-1 rounded border border-white/10 bg-black/55 px-1 text-[9px] font-semibold text-gray-100 transition-colors hover:border-sky-400/30 hover:text-sky-200 sm:text-[10px]"
+                                    className={overlayActionClassName}
                                     title="Xで共有"
                                     aria-label="Xで共有"
                                 >
@@ -219,27 +221,18 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
                                     <span className="whitespace-nowrap">Xで共有</span>
                                 </button>
                             </div>
-                            <div className="grid h-8 grid-cols-3 divide-x divide-white/10 overflow-hidden rounded border border-white/10 bg-black/45 text-gray-300 shadow-inner sm:h-9">
-                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="コメント数">
-                                    <MessageSquare size={10} className="shrink-0 text-gray-400" />
-                                    <span className="flex min-w-0 flex-col leading-none">
-                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.comment_count)}</span>
-                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">コメント</span>
-                                    </span>
+                            <div className="grid h-7 grid-cols-3 divide-x divide-white/10 overflow-hidden rounded border border-white/10 bg-black/45 text-gray-300 shadow-inner">
+                                <div className="flex min-w-0 items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-none" title="コメント数">
+                                    <span className="text-[8px] text-gray-400 sm:text-[9px]">コメント</span>
+                                    <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.comment_count)}</span>
                                 </div>
-                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="閲覧数">
-                                    <Eye size={10} className="shrink-0 text-gray-400" />
-                                    <span className="flex min-w-0 flex-col leading-none">
-                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.views)}</span>
-                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">閲覧</span>
-                                    </span>
+                                <div className="flex min-w-0 items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-none" title="閲覧数">
+                                    <span className="text-[8px] text-gray-400 sm:text-[9px]">閲覧</span>
+                                    <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.views)}</span>
                                 </div>
-                                <div className="flex min-w-0 items-center justify-center gap-1 px-0.5" title="Grokを開いた回数">
-                                    <MousePointer2 size={10} className="shrink-0 text-gray-400" />
-                                    <span className="flex min-w-0 flex-col leading-none">
-                                        <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.clicks)}</span>
-                                        <span className="mt-0.5 whitespace-nowrap text-[8px] text-gray-400 sm:text-[9px]">Grok遷移</span>
-                                    </span>
+                                <div className="flex min-w-0 items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-none" title="Grokを開いた回数">
+                                    <span className="text-[8px] text-gray-400 sm:text-[9px]">Grok遷移</span>
+                                    <span className="text-[10px] font-semibold tabular-nums text-gray-100 sm:text-[11px]">{formatMetricCount(post.clicks)}</span>
                                 </div>
                             </div>
                             {isAdmin && (
