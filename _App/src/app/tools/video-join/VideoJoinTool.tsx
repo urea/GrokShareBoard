@@ -710,6 +710,10 @@ export function VideoJoinTool() {
                   <div className="rounded-lg border border-cyan-700/50 bg-cyan-950/20 px-3 py-2.5 text-xs leading-5 text-cyan-100">
                     <span className="font-bold">PC：</span>「動画を保存」を右クリックして「名前を付けてリンク先を保存」。WindowsはAlt＋クリック、スマートフォンは長押しでも保存できます。
                   </div>
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-2.5 text-xs leading-5 text-amber-100">
+                    <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={15} />
+                    <p>サムネイルが表示されない場合は、Grokの個別ページでシェアボタンを押してから、もう一度お試しください。</p>
+                  </div>
                   {grokItems.map((item, index) => {
                     const localVideo = videos.find((video) => video.postId === item.postId);
                     return (
