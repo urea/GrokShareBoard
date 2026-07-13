@@ -573,7 +573,7 @@ export function VideoJoinTool() {
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <button type="button" onClick={focusUrlInput} className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-black text-[#10232a] transition hover:bg-cyan-300">
-                  <MousePointerClick size={17} /> URLを2本貼るだけ。まずは試してみる
+                  <MousePointerClick size={17} /> URLを貼って結合を始める
                 </button>
                 <button type="button" onClick={() => setIsGuideOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-white/5">
                   <CircleHelp size={17} /> 3ステップの使い方を見る
@@ -706,7 +706,7 @@ export function VideoJoinTool() {
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">3</div>
                 <div>
                   <h2 className="font-bold text-white">結合して保存</h2>
-                  <p className="mt-1 text-xs text-gray-400">まず無劣化の高速結合を試します。</p>
+                  <p className="mt-1 text-xs text-gray-400">まず無劣化の高速結合を行います。</p>
                 </div>
               </div>
 
