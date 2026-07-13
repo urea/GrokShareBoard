@@ -46,6 +46,24 @@ interface GrokVideoItem {
   url: string;
 }
 
+interface ReadableFileHandle {
+  kind: 'file';
+  getFile(): Promise<File>;
+}
+
+interface ReadableDirectoryHandle {
+  name: string;
+  values(): AsyncIterableIterator<ReadableFileHandle | { kind: 'directory' }>;
+}
+
+interface DirectoryPickerWindow extends Window {
+  showDirectoryPicker?: (options?: {
+    id?: string;
+    mode?: 'read';
+    startIn?: 'downloads';
+  }) => Promise<ReadableDirectoryHandle>;
+}
+
 interface JoinOutput {
   url: string;
   fileName: string;
@@ -143,12 +161,16 @@ export function VideoJoinTool() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUrlDragging, setIsUrlDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const [directoryHandle, setDirectoryHandle] = useState<ReadableDirectoryHandle | null>(null);
+  const [directoryMessage, setDirectoryMessage] = useState('');
+  const [supportsDirectoryPicker, setSupportsDirectoryPicker] = useState(false);
   const [output, setOutput] = useState<JoinOutput | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const ffmpegAssetUrlsRef = useRef<string[]>([]);
   const outputUrlRef = useRef<string | null>(null);
   const grokUrlTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const scanDirectoryRef = useRef<() => Promise<void>>(async () => undefined);
 
   const totalBytes = useMemo(() => videos.reduce((sum, video) => sum + video.file.size, 0), [videos]);
   const totalDuration = useMemo(
@@ -181,6 +203,7 @@ export function VideoJoinTool() {
   }, []);
 
   useEffect(() => {
+    setSupportsDirectoryPicker('showDirectoryPicker' in window);
     const savedUrls = sessionStorage.getItem(GROK_URL_SESSION_KEY);
     if (!savedUrls) return;
     const parsed = parseGrokUrls(savedUrls);
@@ -279,6 +302,56 @@ export function VideoJoinTool() {
     void addFiles(Array.from(event.target.files ?? []));
     event.target.value = '';
   };
+
+  const scanDownloadDirectory = async (handle = directoryHandle) => {
+    if (!handle || isBusy || grokItems.length === 0) return;
+    const newestByPostId = new Map<string, File>();
+    for await (const entry of handle.values()) {
+      if (entry.kind !== 'file') continue;
+      const file = await entry.getFile();
+      if (!isMp4(file)) continue;
+      const postId = extractPostIdFromFileName(file.name);
+      if (!postId || !grokItems.some((item) => item.postId === postId)) continue;
+      const previous = newestByPostId.get(postId);
+      if (!previous || file.lastModified >= previous.lastModified) newestByPostId.set(postId, file);
+    }
+    const files = Array.from(newestByPostId.values());
+    const changedFiles = files.filter((file) => {
+      const postId = extractPostIdFromFileName(file.name);
+      const current = videos.find((video) => video.postId === postId)?.file;
+      return !current || current.size !== file.size || current.lastModified !== file.lastModified;
+    });
+    if (changedFiles.length > 0) {
+      await addFiles(changedFiles);
+      setDirectoryMessage(`${files.length}件のMP4をUUIDで確認しました。`);
+    } else if (files.length > 0) {
+      setDirectoryMessage(`${files.length}件のMP4を自動検出済みです。`);
+    } else {
+      setDirectoryMessage('一致するMP4はまだありません。保存後に自動検出します。');
+    }
+  };
+
+  scanDirectoryRef.current = () => scanDownloadDirectory();
+
+  const connectDownloadDirectory = async () => {
+    const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
+    if (!picker) return;
+    try {
+      const handle = await picker({ id: 'grok-video-join-downloads', mode: 'read', startIn: 'downloads' });
+      setDirectoryHandle(handle);
+      setDirectoryMessage(`${handle.name} を読み取り専用で接続しました。`);
+      await scanDownloadDirectory(handle);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setDirectoryMessage('フォルダへ接続できませんでした。MP4の選択またはD&Dを利用してください。');
+    }
+  };
+
+  useEffect(() => {
+    if (!directoryHandle || isBusy) return;
+    const intervalId = window.setInterval(() => void scanDirectoryRef.current(), 2500);
+    return () => window.clearInterval(intervalId);
+  }, [directoryHandle, isBusy]);
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -536,6 +609,8 @@ export function VideoJoinTool() {
     setGrokUrlText('');
     setGrokItems([]);
     setVideos([]);
+    setDirectoryHandle(null);
+    setDirectoryMessage('');
     setPhase('idle');
     setProgress(0);
     setErrorMessage('');
@@ -677,6 +752,21 @@ export function VideoJoinTool() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {supportsDirectoryPicker && grokItems.length > 0 && (
+                <div className="mt-4 rounded-xl border border-cyan-700/50 bg-cyan-950/20 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-cyan-100">ダウンロードフォルダを自動確認</p>
+                      <p className="mt-1 text-xs leading-5 text-gray-400">最初に1回だけ読み取り許可すると、保存されたUUID.mp4を自動でカードへ割り当てます。</p>
+                    </div>
+                    <button type="button" onClick={() => void (directoryHandle ? scanDownloadDirectory() : connectDownloadDirectory())} disabled={isBusy} className="shrink-0 rounded-lg bg-cyan-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-cyan-500 disabled:opacity-40">
+                      {directoryHandle ? 'フォルダを再確認' : 'フォルダを接続'}
+                    </button>
+                  </div>
+                  {directoryMessage && <p className="mt-2 text-xs text-cyan-200" aria-live="polite">{directoryMessage}</p>}
+                  <p className="mt-2 text-[10px] text-gray-500">読み取り専用です。ファイルの変更・削除やサーバー送信は行いません。</p>
                 </div>
               )}
               <div
