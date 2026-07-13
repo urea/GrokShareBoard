@@ -648,7 +648,8 @@ export function VideoJoinTool() {
               >
                 <UploadCloud className="mx-auto mb-2 text-cyan-400" size={30} />
                 <p className="mb-3 text-center text-sm font-bold text-white">Grokのリンクをここへドロップ</p>
-                <textarea ref={grokUrlTextareaRef} value={grokUrlText} onChange={(event) => setGrokUrlText(event.target.value)} disabled={isBusy} rows={2} placeholder="またはGrok投稿URLを貼り付け" className="w-full resize-y rounded-lg border border-gray-600 bg-[#111] px-3 py-2.5 text-sm text-gray-100 outline-none placeholder:text-gray-600 focus:border-cyan-500" aria-label="Grok動画URL" />
+                <textarea ref={grokUrlTextareaRef} value={grokUrlText} onChange={(event) => setGrokUrlText(event.target.value)} disabled={isBusy} rows={3} placeholder={'またはGrok投稿URLを貼り付け（改行区切りで複数指定できます）\nhttps://grok.com/imagine/post/...\nhttps://grok.com/imagine/post/...'} className="w-full resize-y rounded-lg border border-gray-600 bg-[#111] px-3 py-2.5 text-sm text-gray-100 outline-none placeholder:text-gray-600 focus:border-cyan-500" aria-label="Grok動画URL" />
+                <p className="mt-2 text-xs text-gray-500">複数のGrok投稿URLは、1行に1件ずつ貼り付けてまとめて追加できます。</p>
                 <button type="button" onClick={() => addGrokUrls(grokUrlTextareaRef.current?.value ?? '')} disabled={isBusy || !grokUrlText.trim()} className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-500 disabled:opacity-40">
                   <Download size={16} /> 結合リストへ追加
                 </button>
