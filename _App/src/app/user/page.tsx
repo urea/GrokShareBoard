@@ -18,7 +18,6 @@ function UserPosts() {
 
     useEffect(() => {
         if (!userId) {
-            setLoading(false);
             return;
         }
 

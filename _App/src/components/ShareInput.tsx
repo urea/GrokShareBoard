@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Loader2, Image as ImageIcon, AlertTriangle, Sparkles, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { buildGrokImageProxyUrl, buildGrokPublicVideoUrl, extractGrokPostId } from '@/lib/grokMedia';
 
 // Define local interface for Preview Data
 interface PreviewData {
@@ -13,16 +14,6 @@ interface PreviewData {
     title?: string;
     description?: string;
     userId?: string | null;
-}
-
-function extractGrokUuid(value: string) {
-    const match = value.match(/post\/([a-f0-9-]{36})/i);
-    return match ? match[1].toLowerCase() : null;
-}
-
-function buildGrokImageUrl(uuid: string, cacheBust = false) {
-    const base = `https://grok.com/imagine/post/${uuid}/image?v=3`;
-    return cacheBust ? `${base}&t=${Date.now()}` : base;
 }
 
 function isGrokImageProxyUrl(value: string) {
@@ -79,7 +70,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
         try {
             // Client-side regex extraction (GitHub Pages compatible)
             // Pattern: https://grok.com/imagine/post/[UUID]
-            const uuid = extractGrokUuid(url);
+            const uuid = extractGrokPostId(url);
             if (!uuid) {
                 throw new Error('Invalid Grok URL format. Could not find UUID.');
             }
@@ -102,7 +93,7 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 }
 
                 // Unconditionally set video_url to the predictable URL format if missing (Let UI handle 404s)
-                const currentVideoUrl = existingPost.video_url || `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
+                const currentVideoUrl = existingPost.video_url || buildGrokPublicVideoUrl(uuid);
 
                 const existingDescription = existingPost.description
                     || (existingPost.prompt_fetch_status === 'fetched' ? '' : existingPost.prompt || '');
@@ -126,8 +117,8 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // Construct public URLs
             // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
             // Image (Thumbnail): https://imagine-public.x.ai/imagine-public/share-videos/[UUID]_thumbnail.jpg
-            const videoUrl = `https://imagine-public.x.ai/imagine-public/share-videos/${uuid}.mp4`;
-            const imageUrl = buildGrokImageUrl(uuid);
+            const videoUrl = buildGrokPublicVideoUrl(uuid);
+            const imageUrl = buildGrokImageProxyUrl(uuid);
 
             // Unconditionally set the expected URLs. (Real-time 404 detection is handled by the UI tags)
             const mockPreview: PreviewData = {
@@ -162,10 +153,10 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // If image preview failed, fallback to canonical thumbnail URL or proxy
             let finalImageUrl = preview.imageUrl;
             if (previewImageError) {
-                const uuid = extractGrokUuid(preview.url);
+                const uuid = extractGrokPostId(preview.url);
                 if (uuid) {
                     // Priority: If preview already failed through multiple steps, use the robust proxy
-                    finalImageUrl = buildGrokImageUrl(uuid);
+                    finalImageUrl = buildGrokImageProxyUrl(uuid);
                 }
             }
 
@@ -245,14 +236,14 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
             // instead of saving the last failed attempt (e.g. .jpg)
             let finalImageUrl = preview.imageUrl;
             if (previewImageError) {
-                const uuid = extractGrokUuid(preview.url);
+                const uuid = extractGrokPostId(preview.url);
                 if (uuid) {
                     // Priority: If preview already failed through multiple steps, use the robust proxy
-                    finalImageUrl = buildGrokImageUrl(uuid);
+                    finalImageUrl = buildGrokImageProxyUrl(uuid);
                 }
             }
 
-            const grokUuid = extractGrokUuid(preview.url) || undefined;
+            const grokUuid = extractGrokPostId(preview.url) || undefined;
 
             const cleanImageUrl = finalImageUrl.split('?')[0];
             const cleanPreviewUrl = preview.url.split('?')[0];
@@ -368,9 +359,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else {
                                                     // New Specification Rescue: Try Grok proxy URL
-                                                    const uuid = extractGrokUuid(preview?.url || '');
+                                                    const uuid = extractGrokPostId(preview?.url || '');
                                                     if (uuid) {
-                                                        const next = buildGrokImageUrl(uuid);
+                                                        const next = buildGrokImageProxyUrl(uuid);
                                                         setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
@@ -378,9 +369,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                 }
                                             } else if (cleanUrl.includes('/images/') && cleanUrl.endsWith('.jpg')) {
                                                 // New Specification Rescue: Try Grok proxy URL
-                                                const uuid = extractGrokUuid(preview?.url || '');
+                                                const uuid = extractGrokPostId(preview?.url || '');
                                                 if (uuid) {
-                                                    const next = buildGrokImageUrl(uuid);
+                                                    const next = buildGrokImageProxyUrl(uuid);
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                 } else {
                                                     setPreviewImageError(true);
@@ -391,9 +382,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                                     setPreviewImageError(true);
                                                 } else {
                                                     // New Specification Rescue: Try Grok proxy URL (Final Attempt)
-                                                    const uuid = extractGrokUuid(preview?.url || '');
+                                                    const uuid = extractGrokPostId(preview?.url || '');
                                                     if (uuid) {
-                                                        const next = buildGrokImageUrl(uuid);
+                                                        const next = buildGrokImageProxyUrl(uuid);
                                                         setPreview(prev => prev ? ({ ...prev, imageUrl: next }) : null);
                                                     } else {
                                                         setPreviewImageError(true);
@@ -424,9 +415,9 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                                         <button
                                             onClick={() => {
                                                 setError('');
-                                                const uuid = extractGrokUuid(preview.url);
+                                                const uuid = extractGrokPostId(preview.url);
                                                 if (uuid) {
-                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: buildGrokImageUrl(uuid, true) }) : null);
+                                                    setPreview(prev => prev ? ({ ...prev, imageUrl: buildGrokImageProxyUrl(uuid, true) }) : null);
                                                 } else {
                                                     setPreview(prev => prev ? ({ ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${Date.now()}` }) : null);
                                                 }

@@ -1,6 +1,6 @@
 {
   "name": "grok-share-app",
-  "version": "1.12.3",
+  "version": "1.13.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -14,14 +14,16 @@
     "fetch:grok-prompts": "node scripts/fetch_grok_prompts.js"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@supabase/supabase-js": "^2.95.3",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.564.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0"
   },
@@ -32,7 +34,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.10",
     "pg": "^8.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"

@@ -49,5 +49,12 @@ yarn-error.log*
 *.swo
 
 # Dev resources (Private)
-_Dev/
+_Dev/*
+!_Dev/docs/
+_Dev/docs/*
+!_Dev/docs/docs.md
+!_Dev/docs/misc/
+_Dev/docs/misc/*
+!_Dev/docs/misc/20260713_動画URL結合サブツール検討.md
+!_Dev/docs/misc/20260713_動画結合ブラウザツール実装.md
 

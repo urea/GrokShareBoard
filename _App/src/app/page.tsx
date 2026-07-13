@@ -2,9 +2,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import ShareInput from '@/components/ShareInput';
 import VideoCard from '@/components/VideoCard';
-import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, ChevronLeft, ChevronRight, LifeBuoy, Share2, RefreshCw } from 'lucide-react';
+import { Search, FileText, History, ShieldCheck, ShieldAlert, ExternalLink, Copy, ChevronLeft, ChevronRight, LifeBuoy, Share2, RefreshCw, Clapperboard } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Post, PostPromptSource, PostSearchRow } from '@/types';
 import NsfwWarningModal from '@/components/NsfwWarningModal';
@@ -90,7 +91,7 @@ export default function Home() {
   const minSwipeDistance = 50; // Minimum pixel distance required for a swipe
 
   const POSTS_PER_PAGE = 24;
-  const APP_VERSION = 'v1.12.3';
+  const APP_VERSION = 'v1.13.0';
 
   const fetchPosts = async (pageNumber: number, isNewSearch: boolean = false) => {
     if (loading) return;
@@ -499,6 +500,17 @@ export default function Home() {
             </div>
 
             <div className="hidden sm:block h-4 w-[1px] bg-white/20 mx-1" />
+
+            <Link
+              href="/tools/video-join"
+              className="inline-flex items-center gap-1 text-white/80 transition-colors hover:text-white"
+              title="Grok動画をブラウザ内で結合"
+            >
+              <Clapperboard size={20} />
+              <span className="hidden lg:inline text-xs font-medium">動画結合</span>
+            </Link>
+
+            <div className="hidden min-[420px]:block h-4 w-[1px] bg-white/20 mx-1" />
 
             <a
               href="https://note.com/limber_lynx1258/n/n700edc6393f1"
@@ -1036,6 +1048,12 @@ export default function Home() {
             xAI Grok Imagine Curation Platform.
           </p>
           <div className="flex justify-center gap-6">
+            <Link
+              href="/tools/video-join"
+              className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-white"
+            >
+              <Clapperboard size={14} /> Grok動画結合
+            </Link>
             <a
               href="https://note.com/limber_lynx1258/n/n700edc6393f1"
               target="_blank"
