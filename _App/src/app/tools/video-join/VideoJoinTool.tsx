@@ -15,7 +15,6 @@ import {
   Combine,
   Cpu,
   Download,
-  ExternalLink,
   FolderOpen,
   GripVertical,
   HardDriveDownload,
@@ -633,6 +632,9 @@ export function VideoJoinTool() {
                 <div className="rounded-xl border border-dashed border-gray-700 bg-[#191919] px-4 py-8 text-center text-sm text-gray-500">先にGrok動画URLを追加してください。</div>
               ) : (
                 <div className="space-y-3">
+                  <div className="rounded-lg border border-cyan-700/50 bg-cyan-950/20 px-3 py-2.5 text-xs leading-5 text-cyan-100">
+                    <span className="font-bold">PC：</span>「動画を保存」を右クリックして「名前を付けてリンク先を保存」。WindowsはAlt＋クリック、スマートフォンは長押しでも保存できます。
+                  </div>
                   {grokItems.map((item, index) => {
                     const localVideo = videos.find((video) => video.postId === item.postId);
                     return (
@@ -667,7 +669,7 @@ export function VideoJoinTool() {
                               <button type="button" onClick={() => moveVideo(index, -1)} disabled={isBusy || index === 0} className="rounded-md border border-gray-700 p-2 text-gray-400 transition hover:text-white disabled:opacity-20" aria-label={`動画${index + 1}を上へ移動`}><ArrowUp size={15} /></button>
                               <button type="button" onClick={() => moveVideo(index, 1)} disabled={isBusy || index === grokItems.length - 1} className="rounded-md border border-gray-700 p-2 text-gray-400 transition hover:text-white disabled:opacity-20" aria-label={`動画${index + 1}を下へ移動`}><ArrowDown size={15} /></button>
                               <a href={buildGrokPublicVideoUrl(item.postId)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-500">
-                                <ExternalLink size={14} /> 動画を開いて保存
+                                <Download size={14} /> 動画を保存
                               </a>
                             </div>
                           </div>
