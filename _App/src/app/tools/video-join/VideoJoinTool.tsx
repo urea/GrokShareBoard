@@ -354,6 +354,15 @@ export function VideoJoinTool() {
     setStatusMessage('上から順に結合します。順番を確認してください。');
   };
 
+  const removeAssignedVideo = (postId: string) => {
+    if (isBusy) return;
+    releaseOutput();
+    setVideos((current) => current.filter((video) => video.postId !== postId));
+    setPhase('idle');
+    setProgress(0);
+    setStatusMessage('不足しているMP4をもう一度選択してください。');
+  };
+
   const loadFfmpeg = async () => {
     if (ffmpegRef.current?.loaded) return ffmpegRef.current;
 
@@ -648,8 +657,8 @@ export function VideoJoinTool() {
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">2</div>
                 <div>
-                  <h2 className="font-bold text-white">保存・並び替え・MP4割り当て</h2>
-                  <p className="mt-1 text-xs leading-5 text-gray-400">各動画を保存後、MP4をまとめて選択してください。UUIDでカードへ自動割り当てします。</p>
+                  <h2 className="font-bold text-white">動画を確認して保存</h2>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">サムネイルを確認し、結合に使う動画をPCへ保存します。</p>
                 </div>
               </div>
 
@@ -672,39 +681,22 @@ export function VideoJoinTool() {
                     <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={15} />
                     <p>サムネイルが表示されない場合は、Grokの個別ページでシェアボタンを押してから、もう一度お試しください。</p>
                   </div>
-                  {grokItems.map((item, index) => {
-                    const localVideo = videos.find((video) => video.postId === item.postId);
-                    return (
+                  {grokItems.map((item, index) => (
                       <div
                         key={item.postId}
-                        draggable={!isBusy}
-                        onDragStart={() => setDraggedItemIndex(index)}
-                        onDragOver={(event) => { if (draggedItemIndex !== null) event.preventDefault(); }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (draggedItemIndex !== null && draggedItemIndex !== index) reorderVideo(draggedItemIndex, index);
-                          setDraggedItemIndex(null);
-                        }}
-                        onDragEnd={() => setDraggedItemIndex(null)}
-                        className={`overflow-hidden rounded-xl border bg-[#191919] transition ${draggedItemIndex === index ? 'border-cyan-400 opacity-60' : 'border-gray-700'}`}
+                        className="overflow-hidden rounded-xl border border-gray-700 bg-[#191919]"
                       >
                         <div className="grid gap-3 p-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                           <video src={buildGrokPublicVideoUrl(item.postId)} muted controls preload="metadata" className="aspect-video w-full rounded-lg bg-black object-contain" aria-label={`動画${index + 1}のプレビュー`} />
                           <div className="flex min-w-0 flex-col">
                             <div className="flex items-start gap-2">
-                              <GripVertical className="mt-1 shrink-0 text-gray-600" size={18} />
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-black text-cyan-300">結合順 {index + 1}</p>
+                                <p className="text-xs font-black text-cyan-300">動画 {index + 1}</p>
                                 <p className="mt-1 truncate text-xs text-gray-500" title={item.postId}>{item.postId}</p>
                               </div>
                               <button type="button" onClick={() => removeVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`動画${index + 1}を削除`}><Trash2 size={16} /></button>
                             </div>
-                            <div className={`mt-3 rounded-md px-2.5 py-2 text-xs ${localVideo ? 'bg-emerald-950/40 text-emerald-300' : 'bg-amber-950/30 text-amber-300'}`}>
-                              {localVideo ? `MP4選択済み · ${formatBytes(localVideo.file.size)} · ${formatDuration(localVideo.duration)}` : '未選択 · 動画を保存してMP4を割り当ててください'}
-                            </div>
                             <div className="mt-auto flex flex-wrap justify-end gap-2 pt-3">
-                              <button type="button" onClick={() => moveVideo(index, -1)} disabled={isBusy || index === 0} className="rounded-md border border-gray-700 p-2 text-gray-400 transition hover:text-white disabled:opacity-20" aria-label={`動画${index + 1}を上へ移動`}><ArrowUp size={15} /></button>
-                              <button type="button" onClick={() => moveVideo(index, 1)} disabled={isBusy || index === grokItems.length - 1} className="rounded-md border border-gray-700 p-2 text-gray-400 transition hover:text-white disabled:opacity-20" aria-label={`動画${index + 1}を下へ移動`}><ArrowDown size={15} /></button>
                               <a href={buildGrokPublicVideoUrl(item.postId)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-500">
                                 <Download size={14} /> 動画を保存
                               </a>
@@ -712,10 +704,19 @@ export function VideoJoinTool() {
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                  ))}
                 </div>
               )}
+            </section>
+
+            <section className="rounded-xl border border-gray-700 bg-[#222] p-4 shadow-lg shadow-black/10 sm:p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">3</div>
+                <div>
+                  <h2 className="font-bold text-white">結合するMP4を設定</h2>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">保存したMP4をまとめて選び、結合順をここで設定します。</p>
+                </div>
+              </div>
               <div
                 onDragEnter={(event) => { event.preventDefault(); if (!isBusy) setIsDragging(true); }}
                 onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
@@ -736,13 +737,48 @@ export function VideoJoinTool() {
                   ダウンロードからMP4をまとめて選択
                 </button>
               </div>
+
+              {grokItems.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {grokItems.map((item, index) => {
+                    const localVideo = videos.find((video) => video.postId === item.postId);
+                    return (
+                      <div
+                        key={item.postId}
+                        draggable={!isBusy}
+                        onDragStart={() => setDraggedItemIndex(index)}
+                        onDragOver={(event) => { if (draggedItemIndex !== null) event.preventDefault(); }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (draggedItemIndex !== null && draggedItemIndex !== index) reorderVideo(draggedItemIndex, index);
+                          setDraggedItemIndex(null);
+                        }}
+                        onDragEnd={() => setDraggedItemIndex(null)}
+                        className={`flex items-center gap-2 rounded-lg border bg-[#191919] p-2.5 transition sm:gap-3 ${draggedItemIndex === index ? 'border-cyan-400 opacity-60' : localVideo ? 'border-emerald-800/70' : 'border-amber-800/60'}`}
+                      >
+                        <GripVertical className="shrink-0 cursor-grab text-gray-600" size={18} />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-cyan-900/70 text-sm font-black text-cyan-200">{index + 1}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate text-sm font-semibold ${localVideo ? 'text-gray-100' : 'text-amber-200'}`}>{localVideo?.file.name ?? 'MP4未選択'}</p>
+                          <p className="mt-0.5 truncate text-[11px] text-gray-500">{localVideo ? `${formatBytes(localVideo.file.size)} · ${formatDuration(localVideo.duration)}` : item.postId}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button type="button" onClick={() => moveVideo(index, -1)} disabled={isBusy || index === 0} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を上へ移動`}><ArrowUp size={16} /></button>
+                          <button type="button" onClick={() => moveVideo(index, 1)} disabled={isBusy || index === grokItems.length - 1} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を下へ移動`}><ArrowDown size={16} /></button>
+                          {localVideo && <button type="button" onClick={() => removeAssignedVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`${localVideo.file.name}の割り当てを解除`}><Trash2 size={16} /></button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-5 lg:self-start">
             <section className="rounded-xl border border-gray-700 bg-[#222] p-4 shadow-lg shadow-black/10 sm:p-5">
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">3</div>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">4</div>
                 <div>
                   <h2 className="font-bold text-white">結合して保存</h2>
                   <p className="mt-1 text-xs text-gray-400">まず無劣化の高速結合を試します。</p>
