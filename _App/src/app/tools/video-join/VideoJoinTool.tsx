@@ -702,18 +702,24 @@ export function VideoJoinTool() {
                               className="aspect-video w-full rounded-lg bg-black object-contain"
                               aria-label={`動画${index + 1}のプレビュー`}
                             />
-                            {previewErrorIds.has(item.postId) && (
-                              <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-2.5 py-2 text-[11px] leading-5 text-amber-100">
-                                <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={14} />
-                                <p>サムネイルが表示されません。Grokの個別ページでシェアボタンを押してから、もう一度お試しください。</p>
-                              </div>
-                            )}
                           </div>
                           <div className="flex min-w-0 flex-col">
                             <div className="flex items-start gap-2">
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-black text-cyan-300">動画 {index + 1}</p>
                                 <p className="mt-1 truncate text-xs text-gray-500" title={item.postId}>{item.postId}</p>
+                                {previewErrorIds.has(item.postId) && (
+                                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-2.5 py-2 text-[11px] leading-5 text-amber-100">
+                                    <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={14} />
+                                    <p>
+                                      サムネイルが表示されません。
+                                      <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-bold text-amber-300 underline decoration-amber-500/70 underline-offset-2 transition hover:text-amber-200">
+                                        Grokの個別ページを開き
+                                      </a>
+                                      、シェアボタンを押してから、もう一度お試しください。
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               <button type="button" onClick={() => removeVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`動画${index + 1}を削除`}><Trash2 size={16} /></button>
                             </div>
