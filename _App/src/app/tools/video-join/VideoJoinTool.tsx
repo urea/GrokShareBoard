@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,6 +12,7 @@ import {
   ArrowLeft,
   ArrowUp,
   CheckCircle2,
+  CircleHelp,
   Clapperboard,
   Combine,
   Cpu,
@@ -20,11 +22,14 @@ import {
   ListVideo,
   LoaderCircle,
   LockKeyhole,
+  MousePointerClick,
   RotateCcw,
   ShieldCheck,
   Trash2,
   UploadCloud,
+  X,
 } from 'lucide-react';
+import videoJoinGuide from './video-join-guide.png';
 
 const MAX_FILES = 10;
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
@@ -137,6 +142,7 @@ export function VideoJoinTool() {
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [previewErrorIds, setPreviewErrorIds] = useState<Set<string>>(() => new Set());
   const [output, setOutput] = useState<JoinOutput | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const ffmpegAssetUrlsRef = useRef<string[]>([]);
   const outputUrlRef = useRef<string | null>(null);
@@ -179,6 +185,20 @@ export function VideoJoinTool() {
     const frameId = requestAnimationFrame(() => setGrokItems(parsed.valid.map((url) => ({ url, postId: extractGrokPostId(url)! }))));
     return () => cancelAnimationFrame(frameId);
   }, []);
+
+  useEffect(() => {
+    if (!isGuideOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsGuideOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isGuideOpen]);
 
   const persistGrokItems = (items: GrokVideoItem[]) => {
     if (items.length > 0) {
@@ -518,6 +538,11 @@ export function VideoJoinTool() {
     setStatusMessage('Grok動画URLを2本以上追加すると結合できます。');
   };
 
+  const focusUrlInput = () => {
+    grokUrlTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => grokUrlTextareaRef.current?.focus(), 350);
+  };
+
   return (
     <div className="min-h-screen bg-[#171717] text-gray-100">
       <header className="border-b border-cyan-300/20 bg-[#0099cc] shadow-lg shadow-black/20">
@@ -539,12 +564,21 @@ export function VideoJoinTool() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100">
-                <LockKeyhole size={14} /> BROWSER JOIN
+                <LockKeyhole size={14} /> 3-STEP VIDEO JOIN
               </div>
-              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Grok動画を、URLからそのままつなぐ。</h1>
+              <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">貼る。並べる。つなぐ。</h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-                Grok投稿URLを並べて実行すると、動画を自動取得して入力順に1本へ結合します。個別保存やMP4の再選択は不要です。
+                <span className="font-bold text-white">Grok動画を、URLからそのまま1本に。</span><br />
+                個別ダウンロードも、ファイルの選び直しも不要です。
               </p>
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button type="button" onClick={focusUrlInput} className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-black text-[#10232a] transition hover:bg-cyan-300">
+                  <MousePointerClick size={17} /> URLを2本貼るだけ。まずは試してみる
+                </button>
+                <button type="button" onClick={() => setIsGuideOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-white/5">
+                  <CircleHelp size={17} /> 3ステップの使い方を見る
+                </button>
+              </div>
             </div>
             <div className="grid min-w-[230px] grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -567,8 +601,8 @@ export function VideoJoinTool() {
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">1</div>
                 <div>
-                  <h2 className="font-bold text-white">Grok動画URLを追加</h2>
-                  <p className="mt-1 text-xs leading-5 text-gray-400">リンクをドロップ、または複数URLを貼り付けて結合リストを作ります。</p>
+                  <h2 className="font-bold text-white">URLを貼る</h2>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">Grok投稿URLをドロップ、または改行区切りでまとめて貼り付けます。</p>
                 </div>
               </div>
               <div
@@ -592,7 +626,7 @@ export function VideoJoinTool() {
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">2</div>
                 <div>
-                  <h2 className="font-bold text-white">動画を確認して並び替え</h2>
+                  <h2 className="font-bold text-white">順番を並べる</h2>
                   <p className="mt-1 text-xs leading-5 text-gray-400">サムネイルを確認し、ドラッグまたは矢印で結合順を決めます。</p>
                 </div>
               </div>
@@ -751,6 +785,26 @@ export function VideoJoinTool() {
           <p className="mt-2">動画取得時のみGrok Share Boardの中継サーバーを通過します。中継サーバーは動画を保存・加工・キャッシュせず、結合処理と完成動画の生成はブラウザの一時メモリ内で行います。</p>
         </section>
       </main>
+
+      {isGuideOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="video-join-guide-title"
+          onClick={() => setIsGuideOpen(false)}
+        >
+          <div className="relative max-h-full w-full max-w-5xl overflow-auto rounded-2xl border border-cyan-300/30 bg-[#111] p-2 shadow-2xl shadow-cyan-950/40 sm:p-3" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-2 py-2">
+              <h2 id="video-join-guide-title" className="text-sm font-black text-white sm:text-base">Grok Video Join — 3ステップの使い方</h2>
+              <button type="button" onClick={() => setIsGuideOpen(false)} className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white" aria-label="使い方を閉じる">
+                <X size={20} />
+              </button>
+            </div>
+            <Image src={videoJoinGuide} alt="URLを貼る、順番を並べる、結合して保存する、Grok動画結合の3ステップ" className="h-auto w-full rounded-xl" priority />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
