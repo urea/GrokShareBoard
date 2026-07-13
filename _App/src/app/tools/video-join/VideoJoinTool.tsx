@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ChangeEvent, DragEvent } from 'react';
+import type { DragEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import { buildGrokPublicVideoUrl, extractGrokPostId } from '@/lib/grokMedia';
@@ -15,7 +15,6 @@ import {
   Combine,
   Cpu,
   Download,
-  FolderOpen,
   GripVertical,
   HardDriveDownload,
   ListVideo,
@@ -31,6 +30,7 @@ const MAX_FILES = 10;
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 const FFMPEG_CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
 const GROK_URL_SESSION_KEY = 'grok-video-join.urls.v1';
+const VIDEO_RELAY_BASE = 'https://grokshareboard-video-relay.vercel.app/video';
 
 interface LocalVideo {
   id: string;
@@ -46,19 +46,6 @@ interface GrokVideoItem {
   url: string;
 }
 
-interface PickedFileHandle {
-  getFile(): Promise<File>;
-}
-
-interface FilePickerWindow extends Window {
-  showOpenFilePicker?: (options?: {
-    id?: string;
-    multiple?: boolean;
-    startIn?: 'downloads';
-    types?: Array<{ description: string; accept: Record<string, string[]> }>;
-  }) => Promise<PickedFileHandle[]>;
-}
-
 interface JoinOutput {
   url: string;
   fileName: string;
@@ -68,6 +55,7 @@ interface JoinOutput {
 
 type ProcessingPhase =
   | 'idle'
+  | 'downloading'
   | 'loading-engine'
   | 'preparing'
   | 'joining'
@@ -137,28 +125,18 @@ function readVideoMetadata(file: File): Promise<Pick<LocalVideo, 'duration' | 'w
   });
 }
 
-function isMp4(file: File) {
-  return file.type === 'video/mp4' || file.name.toLowerCase().endsWith('.mp4');
-}
-
-function extractPostIdFromFileName(fileName: string) {
-  return fileName.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i)?.[1].toLowerCase() ?? null;
-}
-
 export function VideoJoinTool() {
   const [grokUrlText, setGrokUrlText] = useState('');
   const [grokItems, setGrokItems] = useState<GrokVideoItem[]>([]);
   const [videos, setVideos] = useState<LocalVideo[]>([]);
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
-  const [statusMessage, setStatusMessage] = useState('MP4を2本以上選択すると結合できます。');
+  const [statusMessage, setStatusMessage] = useState('Grok動画URLを2本以上追加すると結合できます。');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const [isUrlDragging, setIsUrlDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [previewErrorIds, setPreviewErrorIds] = useState<Set<string>>(() => new Set());
   const [output, setOutput] = useState<JoinOutput | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const ffmpegAssetUrlsRef = useRef<string[]>([]);
   const outputUrlRef = useRef<string | null>(null);
@@ -169,7 +147,7 @@ export function VideoJoinTool() {
     () => videos.reduce((sum, video) => sum + (video.duration ?? 0), 0),
     [videos],
   );
-  const isBusy = phase === 'loading-engine' || phase === 'preparing' || phase === 'joining' || phase === 'transcoding';
+  const isBusy = phase === 'downloading' || phase === 'loading-engine' || phase === 'preparing' || phase === 'joining' || phase === 'transcoding';
 
   const releaseOutput = () => {
     if (outputUrlRef.current) {
@@ -216,6 +194,11 @@ export function VideoJoinTool() {
       setErrorMessage('Grok投稿URLを認識できませんでした。');
       return;
     }
+    releaseOutput();
+    setVideos([]);
+    setPhase('idle');
+    setProgress(0);
+    setStatusMessage('上から順に結合します。サムネイルと順番を確認してください。');
     setErrorMessage(parsed.invalidCount > 0 ? `認識できない入力を${parsed.invalidCount}件除外しました。` : '');
     setGrokItems((current) => {
       const known = new Set(current.map((item) => item.postId));
@@ -236,90 +219,6 @@ export function VideoJoinTool() {
     addGrokUrls(value);
   };
 
-  const addFiles = async (incoming: File[]) => {
-    if (isBusy || incoming.length === 0) return;
-    setErrorMessage('');
-    releaseOutput();
-
-    const unsupported = incoming.filter((file) => !isMp4(file));
-    const mp4Files = incoming.filter(isMp4);
-    if (unsupported.length > 0) {
-      setErrorMessage('MP4以外のファイルは追加しませんでした。GrokからMP4形式で保存してください。');
-    }
-    if (mp4Files.length === 0) return;
-
-    const recognizedFileMap = new Map<string, File>();
-    mp4Files.forEach((file) => {
-      const postId = extractPostIdFromFileName(file.name);
-      if (postId && grokItems.some((item) => item.postId === postId)) recognizedFileMap.set(postId, file);
-    });
-    const recognizedFiles = Array.from(recognizedFileMap, ([postId, file]) => ({ postId, file }));
-    if (recognizedFiles.length === 0) {
-      setErrorMessage('URLカードと同じUUIDを含むMP4がありませんでした。UUID (1).mp4のような名前にも対応しています。');
-      return;
-    }
-
-    const replacementIds = new Set(recognizedFiles.map(({ postId }) => postId));
-    const retainedBytes = videos.filter((video) => !replacementIds.has(video.postId)).reduce((sum, video) => sum + video.file.size, 0);
-    const nextTotalBytes = retainedBytes + recognizedFiles.reduce((sum, { file }) => sum + file.size, 0);
-    if (nextTotalBytes > MAX_TOTAL_BYTES) {
-      setErrorMessage(`合計${formatBytes(MAX_TOTAL_BYTES)}までにしてください。現在の選択に追加すると${formatBytes(nextTotalBytes)}です。`);
-      return;
-    }
-
-    setStatusMessage('動画情報を確認しています…');
-    const additions = await Promise.all(recognizedFiles.map(async ({ file, postId }) => {
-      const metadata = await readVideoMetadata(file);
-      return {
-        id: postId,
-        postId,
-        file,
-        ...metadata,
-      };
-    }));
-
-    setVideos((current) => {
-      const byPostId = new Map(current.map((video) => [video.postId, video]));
-      additions.forEach((video) => byPostId.set(video.postId, video));
-      return grokItems.flatMap((item) => {
-        const video = byPostId.get(item.postId);
-        return video ? [video] : [];
-      });
-    });
-    setStatusMessage('UUIDで動画を割り当てました。未選択のカードがないか確認してください。');
-  };
-
-  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
-    void addFiles(Array.from(event.target.files ?? []));
-    event.target.value = '';
-  };
-
-  const chooseDownloadedMp4Files = async () => {
-    const picker = (window as FilePickerWindow).showOpenFilePicker;
-    if (!picker) {
-      fileInputRef.current?.click();
-      return;
-    }
-    try {
-      const handles = await picker({
-        id: 'grok-video-join-mp4',
-        multiple: true,
-        startIn: 'downloads',
-        types: [{ description: 'MP4動画', accept: { 'video/mp4': ['.mp4'] } }],
-      });
-      await addFiles(await Promise.all(handles.map((handle) => handle.getFile())));
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      fileInputRef.current?.click();
-    }
-  };
-
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    void addFiles(Array.from(event.dataTransfer.files));
-  };
-
   const reorderVideo = (index: number, destination: number) => {
     if (destination < 0 || destination >= grokItems.length || isBusy) return;
     releaseOutput();
@@ -328,13 +227,7 @@ export function VideoJoinTool() {
       const [item] = next.splice(index, 1);
       next.splice(destination, 0, item);
       persistGrokItems(next);
-      setVideos((currentVideos) => {
-        const byPostId = new Map(currentVideos.map((video) => [video.postId, video]));
-        return next.flatMap((entry) => {
-          const video = byPostId.get(entry.postId);
-          return video ? [video] : [];
-        });
-      });
+      setVideos([]);
       return next;
     });
   };
@@ -355,20 +248,11 @@ export function VideoJoinTool() {
     setStatusMessage('上から順に結合します。順番を確認してください。');
   };
 
-  const removeAssignedVideo = (postId: string) => {
-    if (isBusy) return;
-    releaseOutput();
-    setVideos((current) => current.filter((video) => video.postId !== postId));
-    setPhase('idle');
-    setProgress(0);
-    setStatusMessage('不足しているMP4をもう一度選択してください。');
-  };
-
   const loadFfmpeg = async () => {
     if (ffmpegRef.current?.loaded) return ffmpegRef.current;
 
     setPhase('loading-engine');
-    setProgress(0);
+    setProgress(25);
     setStatusMessage('初回のみ、FFmpeg処理エンジン（約32MB）を読み込んでいます…');
 
     const [{ FFmpeg }, { toBlobURL }] = await Promise.all([
@@ -415,20 +299,68 @@ export function VideoJoinTool() {
     return result === 0;
   };
 
+  const fetchGrokVideos = async () => {
+    setPhase('downloading');
+    setVideos([]);
+    setProgress(0);
+
+    const downloaded: LocalVideo[] = [];
+    let downloadedBytes = 0;
+
+    for (let index = 0; index < grokItems.length; index += 1) {
+      const item = grokItems[index];
+      setStatusMessage(`動画を取得しています（${index + 1}/${grokItems.length}）…`);
+      const response = await fetch(`${VIDEO_RELAY_BASE}/${item.postId}`, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`動画${index + 1}を取得できませんでした。Grokの個別ページでシェアボタンを押してから、もう一度お試しください。`);
+      }
+
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.toLowerCase().startsWith('video/mp4')) {
+        throw new Error(`動画${index + 1}からMP4を取得できませんでした。`);
+      }
+
+      const declaredSize = Number(response.headers.get('content-length') ?? 0);
+      if (declaredSize > 0 && downloadedBytes + declaredSize > MAX_TOTAL_BYTES) {
+        await response.body?.cancel();
+        throw new Error(`動画の合計は${formatBytes(MAX_TOTAL_BYTES)}までです。`);
+      }
+
+      const blob = await response.blob();
+      downloadedBytes += blob.size;
+      if (blob.size < 1024) {
+        throw new Error(`動画${index + 1}を正しく取得できませんでした。`);
+      }
+      if (downloadedBytes > MAX_TOTAL_BYTES) {
+        throw new Error(`動画の合計は${formatBytes(MAX_TOTAL_BYTES)}までです。`);
+      }
+
+      const file = new File([blob], `${item.postId}.mp4`, { type: 'video/mp4' });
+      const metadata = await readVideoMetadata(file);
+      downloaded.push({ id: item.postId, postId: item.postId, file, ...metadata });
+      setVideos([...downloaded]);
+      setProgress(Math.round(((index + 1) / grokItems.length) * 25));
+    }
+
+    return downloaded;
+  };
+
   const joinVideos = async () => {
-    if (videos.length < 2 || isBusy) return;
+    if (grokItems.length < 2 || isBusy) return;
 
     releaseOutput();
     setErrorMessage('');
     setProgress(0);
-    const inputPaths = videos.map((_, index) => `input-${index.toString().padStart(2, '0')}.mp4`);
-    const normalizedPaths = videos.map((_, index) => `normalized-${index.toString().padStart(2, '0')}.mp4`);
+    const inputPaths = grokItems.map((_, index) => `input-${index.toString().padStart(2, '0')}.mp4`);
+    const normalizedPaths = grokItems.map((_, index) => `normalized-${index.toString().padStart(2, '0')}.mp4`);
     const listPath = 'join-list.txt';
     const normalizedListPath = 'normalized-list.txt';
     const outputPath = 'joined-output.mp4';
     let ffmpeg: FFmpeg | null = null;
+    let sourceVideos: LocalVideo[] = [];
 
     try {
+      sourceVideos = await fetchGrokVideos();
       ffmpeg = await loadFfmpeg();
       const { fetchFile } = await import('@ffmpeg/util');
       let progressBase = 0;
@@ -441,10 +373,10 @@ export function VideoJoinTool() {
 
       try {
         setPhase('preparing');
-        for (let index = 0; index < videos.length; index += 1) {
-          setStatusMessage(`動画をブラウザ内の作業領域へ準備しています（${index + 1}/${videos.length}）…`);
-          await ffmpeg.writeFile(inputPaths[index], await fetchFile(videos[index].file));
-          setProgress(Math.round(((index + 1) / videos.length) * 25));
+        for (let index = 0; index < sourceVideos.length; index += 1) {
+          setStatusMessage(`動画をブラウザ内の作業領域へ準備しています（${index + 1}/${sourceVideos.length}）…`);
+          await ffmpeg.writeFile(inputPaths[index], await fetchFile(sourceVideos[index].file));
+          setProgress(25 + Math.round(((index + 1) / sourceVideos.length) * 15));
         }
         await ffmpeg.writeFile(listPath, inputPaths.map((path) => `file '${path}'`).join('\n'));
 
@@ -453,8 +385,8 @@ export function VideoJoinTool() {
         for (let index = 0; index < inputPaths.length; index += 1) {
           audioPresence.push(await hasAudioStream(ffmpeg, inputPaths[index]));
         }
-        const firstDimensions = `${videos[0].width ?? 'unknown'}x${videos[0].height ?? 'unknown'}`;
-        const sameDimensions = videos.every((video) => `${video.width ?? 'unknown'}x${video.height ?? 'unknown'}` === firstDimensions);
+        const firstDimensions = `${sourceVideos[0].width ?? 'unknown'}x${sourceVideos[0].height ?? 'unknown'}`;
+        const sameDimensions = sourceVideos.every((video) => `${video.width ?? 'unknown'}x${video.height ?? 'unknown'}` === firstDimensions);
         const sameAudioPresence = audioPresence.every((hasAudio) => hasAudio === audioPresence[0]);
         const canStreamCopy = sameDimensions && sameAudioPresence;
 
@@ -462,10 +394,10 @@ export function VideoJoinTool() {
         let result = 1;
         if (canStreamCopy) {
           setPhase('joining');
-          setProgress(25);
+          setProgress(40);
           setStatusMessage('画質を変えずに高速結合しています…');
-          progressBase = 25;
-          progressRange = 70;
+          progressBase = 40;
+          progressRange = 55;
           result = await ffmpeg.exec([
             '-hide_banner',
             '-f', 'concat',
@@ -483,17 +415,17 @@ export function VideoJoinTool() {
           await deleteVirtualFiles(ffmpeg, [outputPath]);
           mode = 'transcode';
           setPhase('transcoding');
-          setProgress(0);
-          const targetWidth = Math.max(2, Math.floor((videos[0].width ?? 720) / 2) * 2);
-          const targetHeight = Math.max(2, Math.floor((videos[0].height ?? 1280) / 2) * 2);
+          setProgress(40);
+          const targetWidth = Math.max(2, Math.floor((sourceVideos[0].width ?? 720) / 2) * 2);
+          const targetHeight = Math.max(2, Math.floor((sourceVideos[0].height ?? 1280) / 2) * 2);
           const anyAudio = audioPresence.some(Boolean);
 
           for (let index = 0; index < inputPaths.length; index += 1) {
             setStatusMessage(`動画形式を揃えています（${index + 1}/${inputPaths.length}）。数分かかる場合があります…`);
-            progressBase = Math.round((index / inputPaths.length) * 85);
-            progressRange = 85 / inputPaths.length;
+            progressBase = 40 + Math.round((index / inputPaths.length) * 50);
+            progressRange = 50 / inputPaths.length;
             const hasAudio = audioPresence[index];
-            const duration = Math.max(0.1, videos[index].duration ?? 1);
+            const duration = Math.max(0.1, sourceVideos[index].duration ?? 1);
             const args = ['-hide_banner', '-i', inputPaths[index]];
             if (anyAudio && !hasAudio) {
               args.push('-f', 'lavfi', '-t', duration.toFixed(3), '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000');
@@ -513,14 +445,14 @@ export function VideoJoinTool() {
             args.push('-movflags', '+faststart', normalizedPaths[index]);
             const normalizeResult = await ffmpeg.exec(args);
             if (normalizeResult !== 0) {
-              throw new Error(`${videos[index].file.name}を互換MP4へ変換できませんでした。`);
+              throw new Error(`${sourceVideos[index].file.name}を互換MP4へ変換できませんでした。`);
             }
           }
 
           await ffmpeg.writeFile(normalizedListPath, normalizedPaths.map((path) => `file '${path}'`).join('\n'));
           setStatusMessage('変換した動画を1本へまとめています…');
-          progressBase = 85;
-          progressRange = 14;
+          progressBase = 90;
+          progressRange = 9;
           result = await ffmpeg.exec([
             '-hide_banner',
             '-f', 'concat',
@@ -583,7 +515,7 @@ export function VideoJoinTool() {
     setPhase('idle');
     setProgress(0);
     setErrorMessage('');
-    setStatusMessage('MP4を2本以上選択すると結合できます。');
+    setStatusMessage('Grok動画URLを2本以上追加すると結合できます。');
   };
 
   return (
@@ -607,18 +539,18 @@ export function VideoJoinTool() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100">
-                <LockKeyhole size={14} /> LOCAL PROCESSING
+                <LockKeyhole size={14} /> BROWSER JOIN
               </div>
-              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Grok動画を、端末の中だけでつなぐ。</h1>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Grok動画を、URLからそのままつなぐ。</h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-                Grokから保存したMP4を選ぶと、入力順に1本へ結合します。動画はサーバーへ送信されず、このブラウザ内だけで処理されます。
+                Grok投稿URLを並べて実行すると、動画を自動取得して入力順に1本へ結合します。個別保存やMP4の再選択は不要です。
               </p>
             </div>
             <div className="grid min-w-[230px] grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <ShieldCheck className="mb-2 text-emerald-400" size={20} />
-                <p className="font-bold text-white">アップロードなし</p>
-                <p className="mt-1 text-gray-400">動画は端末外へ送信しません</p>
+                <p className="font-bold text-white">保存・加工なし</p>
+                <p className="mt-1 text-gray-400">中継サーバーは動画を保持しません</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <Cpu className="mb-2 text-cyan-400" size={20} />
@@ -660,30 +592,27 @@ export function VideoJoinTool() {
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">2</div>
                 <div>
-                  <h2 className="font-bold text-white">動画を確認して保存</h2>
-                  <p className="mt-1 text-xs leading-5 text-gray-400">サムネイルを確認し、結合に使う動画をPCへ保存します。</p>
+                  <h2 className="font-bold text-white">動画を確認して並び替え</h2>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">サムネイルを確認し、ドラッグまたは矢印で結合順を決めます。</p>
                 </div>
               </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/mp4,.mp4"
-                multiple
-                className="hidden"
-                onChange={handleFileInput}
-              />
               {grokItems.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-700 bg-[#191919] px-4 py-8 text-center text-sm text-gray-500">先にGrok動画URLを追加してください。</div>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-cyan-700/50 bg-cyan-950/20 px-3 py-2.5 text-xs leading-5 text-cyan-100">
-                    <span className="font-bold">PC：</span>「動画を保存」を右クリックして「名前を付けてリンク先を保存」。WindowsはAlt＋クリック、スマートフォンは長押しでも保存できます。
-                  </div>
                   {grokItems.map((item, index) => (
                       <div
                         key={item.postId}
-                        className="overflow-hidden rounded-xl border border-gray-700 bg-[#191919]"
+                        draggable={!isBusy}
+                        onDragStart={() => setDraggedItemIndex(index)}
+                        onDragOver={(event) => { if (draggedItemIndex !== null) event.preventDefault(); }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (draggedItemIndex !== null && draggedItemIndex !== index) reorderVideo(draggedItemIndex, index);
+                          setDraggedItemIndex(null);
+                        }}
+                        onDragEnd={() => setDraggedItemIndex(null)}
+                        className={`overflow-hidden rounded-xl border bg-[#191919] transition ${draggedItemIndex === index ? 'border-cyan-400 opacity-60' : 'border-gray-700'}`}
                       >
                         <div className="grid gap-3 p-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                           <div>
@@ -705,6 +634,7 @@ export function VideoJoinTool() {
                           </div>
                           <div className="flex min-w-0 flex-col">
                             <div className="flex items-start gap-2">
+                              <GripVertical className="mt-0.5 shrink-0 cursor-grab text-gray-600" size={18} />
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-black text-cyan-300">動画 {index + 1}</p>
                                 <p className="mt-1 truncate text-xs text-gray-500" title={item.postId}>{item.postId}</p>
@@ -721,12 +651,11 @@ export function VideoJoinTool() {
                                   </div>
                                 )}
                               </div>
-                              <button type="button" onClick={() => removeVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`動画${index + 1}を削除`}><Trash2 size={16} /></button>
-                            </div>
-                            <div className="mt-auto flex flex-wrap justify-end gap-2 pt-3">
-                              <a href={buildGrokPublicVideoUrl(item.postId)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-500">
-                                <Download size={14} /> 動画を保存
-                              </a>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <button type="button" onClick={() => moveVideo(index, -1)} disabled={isBusy || index === 0} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を上へ移動`}><ArrowUp size={16} /></button>
+                                <button type="button" onClick={() => moveVideo(index, 1)} disabled={isBusy || index === grokItems.length - 1} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を下へ移動`}><ArrowDown size={16} /></button>
+                                <button type="button" onClick={() => removeVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`動画${index + 1}を削除`}><Trash2 size={16} /></button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -735,77 +664,12 @@ export function VideoJoinTool() {
                 </div>
               )}
             </section>
-
-            <section className="rounded-xl border border-gray-700 bg-[#222] p-4 shadow-lg shadow-black/10 sm:p-5">
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">3</div>
-                <div>
-                  <h2 className="font-bold text-white">結合するMP4を設定</h2>
-                  <p className="mt-1 text-xs leading-5 text-gray-400">保存したMP4をまとめて選び、結合順をここで設定します。</p>
-                </div>
-              </div>
-              <div
-                onDragEnter={(event) => { event.preventDefault(); if (!isBusy) setIsDragging(true); }}
-                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
-                onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDragging(false); }}
-                onDrop={handleDrop}
-                className={`mt-4 rounded-xl border-2 border-dashed px-4 py-6 text-center transition ${isDragging ? 'border-emerald-400 bg-emerald-400/10' : 'border-gray-600 bg-[#191919] hover:border-gray-500'} ${isBusy || grokItems.length === 0 ? 'pointer-events-none opacity-40' : ''}`}
-              >
-                <FolderOpen className="mx-auto mb-3 text-emerald-400" size={30} />
-                <p className="text-sm font-bold text-white">保存したMP4をまとめて選択</p>
-                <p className="mt-1 text-xs text-gray-500">UUID (1).mp4なども同じカードへ上書きします</p>
-                <p className="my-2 text-xs text-gray-500">または</p>
-                <button
-                  type="button"
-                  onClick={() => void chooseDownloadedMp4Files()}
-                  disabled={isBusy}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  ダウンロードからMP4をまとめて選択
-                </button>
-              </div>
-
-              {grokItems.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {grokItems.map((item, index) => {
-                    const localVideo = videos.find((video) => video.postId === item.postId);
-                    return (
-                      <div
-                        key={item.postId}
-                        draggable={!isBusy}
-                        onDragStart={() => setDraggedItemIndex(index)}
-                        onDragOver={(event) => { if (draggedItemIndex !== null) event.preventDefault(); }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (draggedItemIndex !== null && draggedItemIndex !== index) reorderVideo(draggedItemIndex, index);
-                          setDraggedItemIndex(null);
-                        }}
-                        onDragEnd={() => setDraggedItemIndex(null)}
-                        className={`flex items-center gap-2 rounded-lg border bg-[#191919] p-2.5 transition sm:gap-3 ${draggedItemIndex === index ? 'border-cyan-400 opacity-60' : localVideo ? 'border-emerald-800/70' : 'border-amber-800/60'}`}
-                      >
-                        <GripVertical className="shrink-0 cursor-grab text-gray-600" size={18} />
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-cyan-900/70 text-sm font-black text-cyan-200">{index + 1}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`truncate text-sm font-semibold ${localVideo ? 'text-gray-100' : 'text-amber-200'}`}>{localVideo?.file.name ?? 'MP4未選択'}</p>
-                          <p className="mt-0.5 truncate text-[11px] text-gray-500">{localVideo ? `${formatBytes(localVideo.file.size)} · ${formatDuration(localVideo.duration)}` : item.postId}</p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button type="button" onClick={() => moveVideo(index, -1)} disabled={isBusy || index === 0} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を上へ移動`}><ArrowUp size={16} /></button>
-                          <button type="button" onClick={() => moveVideo(index, 1)} disabled={isBusy || index === grokItems.length - 1} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white disabled:opacity-20" aria-label={`${index + 1}番を下へ移動`}><ArrowDown size={16} /></button>
-                          {localVideo && <button type="button" onClick={() => removeAssignedVideo(item.postId)} disabled={isBusy} className="rounded-md p-1.5 text-gray-500 transition hover:bg-red-950 hover:text-red-300" aria-label={`${localVideo.file.name}の割り当てを解除`}><Trash2 size={16} /></button>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-5 lg:self-start">
             <section className="rounded-xl border border-gray-700 bg-[#222] p-4 shadow-lg shadow-black/10 sm:p-5">
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">4</div>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-black text-white">3</div>
                 <div>
                   <h2 className="font-bold text-white">結合して保存</h2>
                   <p className="mt-1 text-xs text-gray-400">まず無劣化の高速結合を試します。</p>
@@ -813,7 +677,7 @@ export function VideoJoinTool() {
               </div>
 
               <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-[#191919] p-2.5"><p className="text-lg font-black text-white">{videos.length}/{grokItems.length}</p><p className="text-[10px] text-gray-500">選択済み</p></div>
+                <div className="rounded-lg bg-[#191919] p-2.5"><p className="text-lg font-black text-white">{grokItems.length}</p><p className="text-[10px] text-gray-500">動画数</p></div>
                 <div className="rounded-lg bg-[#191919] p-2.5"><p className="text-sm font-black text-white">{formatDuration(totalDuration)}</p><p className="text-[10px] text-gray-500">合計時間</p></div>
                 <div className="rounded-lg bg-[#191919] p-2.5"><p className="text-sm font-black text-white">{formatBytes(totalBytes)}</p><p className="text-[10px] text-gray-500">合計容量</p></div>
               </div>
@@ -840,11 +704,11 @@ export function VideoJoinTool() {
               <button
                 type="button"
                 onClick={() => void joinVideos()}
-                disabled={videos.length < 2 || videos.length !== grokItems.length || isBusy}
+                disabled={grokItems.length < 2 || isBusy}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500 disabled:shadow-none"
               >
                 {isBusy ? <LoaderCircle className="animate-spin" size={18} /> : <Combine size={18} />}
-                {isBusy ? 'ブラウザ内で処理中' : '動画を結合する'}
+                {isBusy ? '取得・結合中' : '動画を取得して結合'}
               </button>
 
               {output && (
@@ -884,7 +748,7 @@ export function VideoJoinTool() {
 
         <section className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4 text-xs leading-6 text-gray-400 sm:p-5">
           <h2 className="flex items-center gap-2 font-bold text-emerald-200"><ShieldCheck size={17} /> プライバシーについて</h2>
-          <p className="mt-2">選択した動画、Grok URL、完成動画をGrok Share Boardのサーバーや第三者ストレージへ送信しません。結合処理エンジンのみ固定バージョンのCDNから読み込み、動画処理はブラウザの一時メモリ内で行います。</p>
+          <p className="mt-2">動画取得時のみGrok Share Boardの中継サーバーを通過します。中継サーバーは動画を保存・加工・キャッシュせず、結合処理と完成動画の生成はブラウザの一時メモリ内で行います。</p>
         </section>
       </main>
     </div>

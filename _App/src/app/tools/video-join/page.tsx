@@ -3,7 +3,7 @@ import { VideoJoinTool } from './VideoJoinTool';
 
 export const metadata: Metadata = {
   title: 'Grok動画結合 | Grok Share Board',
-  description: 'Grokで保存した複数のMP4を、サーバーへ送らずブラウザ内だけで1本に結合します。',
+  description: '複数のGrok投稿URLから動画を自動取得し、ブラウザ内で1本のMP4に結合します。',
   alternates: {
     canonical: '/tools/video-join/',
   },
