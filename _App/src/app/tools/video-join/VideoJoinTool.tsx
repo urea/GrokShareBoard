@@ -156,6 +156,7 @@ export function VideoJoinTool() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUrlDragging, setIsUrlDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const [previewErrorIds, setPreviewErrorIds] = useState<Set<string>>(() => new Set());
   const [output, setOutput] = useState<JoinOutput | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ffmpegRef = useRef<FFmpeg | null>(null);
@@ -577,6 +578,7 @@ export function VideoJoinTool() {
     sessionStorage.removeItem(GROK_URL_SESSION_KEY);
     setGrokUrlText('');
     setGrokItems([]);
+    setPreviewErrorIds(new Set());
     setVideos([]);
     setPhase('idle');
     setProgress(0);
@@ -677,17 +679,35 @@ export function VideoJoinTool() {
                   <div className="rounded-lg border border-cyan-700/50 bg-cyan-950/20 px-3 py-2.5 text-xs leading-5 text-cyan-100">
                     <span className="font-bold">PC：</span>「動画を保存」を右クリックして「名前を付けてリンク先を保存」。WindowsはAlt＋クリック、スマートフォンは長押しでも保存できます。
                   </div>
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-2.5 text-xs leading-5 text-amber-100">
-                    <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={15} />
-                    <p>サムネイルが表示されない場合は、Grokの個別ページでシェアボタンを押してから、もう一度お試しください。</p>
-                  </div>
                   {grokItems.map((item, index) => (
                       <div
                         key={item.postId}
                         className="overflow-hidden rounded-xl border border-gray-700 bg-[#191919]"
                       >
                         <div className="grid gap-3 p-3 sm:grid-cols-[180px_minmax(0,1fr)]">
-                          <video src={buildGrokPublicVideoUrl(item.postId)} muted controls preload="metadata" className="aspect-video w-full rounded-lg bg-black object-contain" aria-label={`動画${index + 1}のプレビュー`} />
+                          <div>
+                            <video
+                              src={buildGrokPublicVideoUrl(item.postId)}
+                              muted
+                              controls
+                              preload="metadata"
+                              onLoadedMetadata={() => setPreviewErrorIds((current) => {
+                                if (!current.has(item.postId)) return current;
+                                const next = new Set(current);
+                                next.delete(item.postId);
+                                return next;
+                              })}
+                              onError={() => setPreviewErrorIds((current) => new Set(current).add(item.postId))}
+                              className="aspect-video w-full rounded-lg bg-black object-contain"
+                              aria-label={`動画${index + 1}のプレビュー`}
+                            />
+                            {previewErrorIds.has(item.postId) && (
+                              <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-2.5 py-2 text-[11px] leading-5 text-amber-100">
+                                <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={14} />
+                                <p>サムネイルが表示されません。Grokの個別ページでシェアボタンを押してから、もう一度お試しください。</p>
+                              </div>
+                            )}
+                          </div>
                           <div className="flex min-w-0 flex-col">
                             <div className="flex items-start gap-2">
                               <div className="min-w-0 flex-1">
