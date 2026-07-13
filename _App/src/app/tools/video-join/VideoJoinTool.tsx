@@ -701,21 +701,11 @@ export function VideoJoinTool() {
                 <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-950/20 p-3 text-xs leading-5 text-amber-200">{errorMessage}</p>
               )}
 
-              <button
-                type="button"
-                onClick={() => void joinVideos()}
-                disabled={grokItems.length < 2 || isBusy}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500 disabled:shadow-none"
-              >
-                {isBusy ? <LoaderCircle className="animate-spin" size={18} /> : <Combine size={18} />}
-                {isBusy ? '取得・結合中' : '動画を取得して結合'}
-              </button>
-
               {output && (
                 <a
                   href={output.url}
                   download={output.fileName}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/40 transition hover:bg-emerald-500"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/40 transition hover:bg-emerald-500"
                 >
                   <Download size={18} /> 完成MP4を保存（{formatBytes(output.size)}）
                 </a>
@@ -724,6 +714,16 @@ export function VideoJoinTool() {
               {output && (
                 <p className="mt-2 text-center text-[10px] text-gray-500">{output.mode === 'copy' ? '高速結合・再エンコードなし' : '互換MP4へ変換して結合'}</p>
               )}
+
+              <button
+                type="button"
+                onClick={() => void joinVideos()}
+                disabled={grokItems.length < 2 || isBusy}
+                className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500 disabled:shadow-none ${output ? 'mt-3 border border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white' : 'bg-cyan-600 text-white shadow-lg shadow-cyan-950/40 hover:bg-cyan-500'}`}
+              >
+                {isBusy ? <LoaderCircle className="animate-spin" size={18} /> : output ? <RotateCcw size={18} /> : <Combine size={18} />}
+                {isBusy ? '取得・結合中' : output ? 'もう一度結合する' : '動画を取得して結合'}
+              </button>
 
               <button
                 type="button"
