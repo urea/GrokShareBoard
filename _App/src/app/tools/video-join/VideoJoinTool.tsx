@@ -30,8 +30,6 @@ import {
 } from 'lucide-react';
 import videoJoinGuide from './video-join-guide.png';
 
-const MAX_FILES = 10;
-const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 const FFMPEG_CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
 const GROK_URL_SESSION_KEY = 'grok-video-join.urls.v1';
 const VIDEO_RELAY_BASE = 'https://grokshareboard-video-relay.vercel.app/video';
@@ -224,7 +222,7 @@ export function VideoJoinTool() {
       const additions = parsed.valid
         .map((url) => ({ url, postId: extractGrokPostId(url)! }))
         .filter((item) => !known.has(item.postId));
-      const next = [...current, ...additions].slice(0, MAX_FILES);
+      const next = [...current, ...additions];
       persistGrokItems(next);
       return next;
     });
@@ -324,8 +322,6 @@ export function VideoJoinTool() {
     setProgress(0);
 
     const downloaded: LocalVideo[] = [];
-    let downloadedBytes = 0;
-
     for (let index = 0; index < grokItems.length; index += 1) {
       const item = grokItems[index];
       setStatusMessage(`動画を取得しています（${index + 1}/${grokItems.length}）…`);
@@ -339,19 +335,9 @@ export function VideoJoinTool() {
         throw new Error(`動画${index + 1}からMP4を取得できませんでした。`);
       }
 
-      const declaredSize = Number(response.headers.get('content-length') ?? 0);
-      if (declaredSize > 0 && downloadedBytes + declaredSize > MAX_TOTAL_BYTES) {
-        await response.body?.cancel();
-        throw new Error(`動画の合計は${formatBytes(MAX_TOTAL_BYTES)}までです。`);
-      }
-
       const blob = await response.blob();
-      downloadedBytes += blob.size;
       if (blob.size < 1024) {
         throw new Error(`動画${index + 1}を正しく取得できませんでした。`);
-      }
-      if (downloadedBytes > MAX_TOTAL_BYTES) {
-        throw new Error(`動画の合計は${formatBytes(MAX_TOTAL_BYTES)}までです。`);
       }
 
       const file = new File([blob], `${item.postId}.mp4`, { type: 'video/mp4' });
@@ -573,7 +559,7 @@ export function VideoJoinTool() {
                 <button type="button" onClick={focusUrlInput} className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-black text-[#10232a] transition hover:bg-cyan-300">
                   <MousePointerClick size={17} /> URLを貼って結合を始める
                 </button>
-                <span className="text-xs text-gray-400">最大10件・初回エンジン約32MB</span>
+                <span className="text-xs text-gray-400">件数・容量の固定上限なし・初回エンジン約32MB</span>
               </div>
             </div>
             <button type="button" onClick={() => setIsGuideOpen(true)} className="group relative overflow-hidden rounded-xl border border-cyan-300/25 bg-black/30 text-left shadow-lg transition hover:border-cyan-300/60 hover:shadow-cyan-950/40" aria-label="3ステップの使い方画像を拡大表示">
@@ -605,7 +591,7 @@ export function VideoJoinTool() {
                 <UploadCloud className="mx-auto mb-2 text-cyan-400" size={30} />
                 <p className="mb-3 text-center text-sm font-bold text-white">Grokのリンクをここへドロップ</p>
                 <textarea ref={grokUrlTextareaRef} value={grokUrlText} onChange={(event) => setGrokUrlText(event.target.value)} disabled={isBusy} rows={3} placeholder={'またはGrok投稿URLを貼り付け（改行区切りで複数指定できます）\nhttps://grok.com/imagine/post/...\nhttps://grok.com/imagine/post/...'} className="w-full resize-y rounded-lg border border-gray-600 bg-[#111] px-3 py-2.5 text-sm text-gray-100 outline-none placeholder:text-gray-600 focus:border-cyan-500" aria-label="Grok動画URL" />
-                <p className="mt-2 text-xs text-gray-500">複数のGrok投稿URLは、1行に1件ずつ最大10件までまとめて追加できます。</p>
+                <p className="mt-2 text-xs text-gray-500">複数のGrok投稿URLは、1行に1件ずつまとめて追加できます。処理可能な量はPC環境によります。</p>
                 <button type="button" onClick={() => addGrokUrls(grokUrlTextareaRef.current?.value ?? '')} disabled={isBusy || !grokUrlText.trim()} className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-500 disabled:opacity-40">
                   <Download size={16} /> 結合リストへ追加
                 </button>
