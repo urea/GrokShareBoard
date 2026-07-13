@@ -15,7 +15,6 @@ import {
   CircleHelp,
   Clapperboard,
   Combine,
-  Cpu,
   Download,
   GripVertical,
   HardDriveDownload,
@@ -559,39 +558,30 @@ export function VideoJoinTool() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-5 sm:py-10">
-        <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-[#12303b] via-[#20252a] to-[#222] p-5 shadow-xl shadow-black/20 sm:p-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
+      <main className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
+        <section className="mb-5 overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-[#12303b] via-[#20252a] to-[#222] p-4 shadow-xl shadow-black/20 sm:p-5">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:items-center lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100">
                 <LockKeyhole size={14} /> 3-STEP VIDEO JOIN
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">貼る。並べる。つなぐ。</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-                <span className="font-bold text-white">Grok動画を、URLからそのまま1本に。</span><br />
-                個別ダウンロードも、ファイルの選び直しも不要です。
+              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">貼る。並べる。つなぐ。</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-300">
+                <span className="font-bold text-white">Grok動画を、URLからそのまま1本に。</span> 個別ダウンロードも、ファイルの選び直しも不要です。
               </p>
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button type="button" onClick={focusUrlInput} className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-black text-[#10232a] transition hover:bg-cyan-300">
                   <MousePointerClick size={17} /> URLを貼って結合を始める
                 </button>
-                <button type="button" onClick={() => setIsGuideOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-white/5">
-                  <CircleHelp size={17} /> 3ステップの使い方を見る
-                </button>
+                <span className="text-xs text-gray-400">最大10件・初回エンジン約32MB</span>
               </div>
             </div>
-            <div className="grid min-w-[230px] grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <ShieldCheck className="mb-2 text-emerald-400" size={20} />
-                <p className="font-bold text-white">保存・加工なし</p>
-                <p className="mt-1 text-gray-400">中継サーバーは動画を保持しません</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <Cpu className="mb-2 text-cyan-400" size={20} />
-                <p className="font-bold text-white">FFmpeg in Browser</p>
-                <p className="mt-1 text-gray-400">初回実行時に約32MB</p>
-              </div>
-            </div>
+            <button type="button" onClick={() => setIsGuideOpen(true)} className="group relative overflow-hidden rounded-xl border border-cyan-300/25 bg-black/30 text-left shadow-lg transition hover:border-cyan-300/60 hover:shadow-cyan-950/40" aria-label="3ステップの使い方画像を拡大表示">
+              <Image src={videoJoinGuide} alt="Grok動画結合の3ステップ" className="h-auto w-full transition duration-300 group-hover:scale-[1.02]" priority />
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-black/75 px-3 py-2 text-xs font-bold text-white backdrop-blur-sm">
+                <CircleHelp size={15} className="text-cyan-300" /> 画像で使い方を見る
+              </span>
+            </button>
           </div>
         </section>
 
