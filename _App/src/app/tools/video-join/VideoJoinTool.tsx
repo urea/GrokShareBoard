@@ -568,7 +568,7 @@ export function VideoJoinTool() {
               </div>
               <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Grok動画を、端末の中だけでつなぐ。</h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-                Grokから保存したMP4を選ぶと、入力順に1本へ結合します。動画はサーバーやSupabaseへ送信されず、このブラウザ内だけで処理されます。
+                Grokから保存したMP4を選ぶと、入力順に1本へ結合します。動画はサーバーへ送信されず、このブラウザ内だけで処理されます。
               </p>
             </div>
             <div className="grid min-w-[230px] grid-cols-2 gap-2 text-xs">
@@ -782,7 +782,7 @@ export function VideoJoinTool() {
 
         <section className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4 text-xs leading-6 text-gray-400 sm:p-5">
           <h2 className="flex items-center gap-2 font-bold text-emerald-200"><ShieldCheck size={17} /> プライバシーについて</h2>
-          <p className="mt-2">選択した動画、Grok URL、完成動画をGrok Share Boardのサーバー・Supabase・第三者ストレージへ送信しません。結合処理エンジンのみ固定バージョンのCDNから読み込み、動画処理はブラウザの一時メモリ内で行います。</p>
+          <p className="mt-2">選択した動画、Grok URL、完成動画をGrok Share Boardのサーバーや第三者ストレージへ送信しません。結合処理エンジンのみ固定バージョンのCDNから読み込み、動画処理はブラウザの一時メモリ内で行います。</p>
         </section>
       </main>
     </div>
