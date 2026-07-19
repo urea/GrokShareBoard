@@ -41,7 +41,7 @@ export default function VideoCard({ post, compact = false, overlayStyle = false,
     };
 
     const displayImageUrl = getValidImageUrl(post.image_url);
-    const isVideo = displayImageUrl?.includes('_thumbnail.jpg');
+    const isVideo = Boolean(post.video_url?.toLowerCase().includes('.mp4'));
     const fetchedPrompt = post.prompt_fetch_status === 'fetched' ? post.prompt : null;
     const displayText = post.description || fetchedPrompt;
     const [imageError, setImageError] = useState(false);

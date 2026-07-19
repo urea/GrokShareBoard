@@ -5,7 +5,12 @@ import Link from 'next/link';
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
-import { buildGrokPublicVideoUrl, extractGrokPostId } from '@/lib/grokMedia';
+import {
+  buildGrokPlayableVideoUrl,
+  extractGrokPostId,
+  isResolvedGrokVideo,
+  resolveGrokMedia,
+} from '@/lib/grokMedia';
 import {
   AlertTriangle,
   ArrowDown,
@@ -32,8 +37,6 @@ import videoJoinGuide from './video-join-guide.png';
 
 const FFMPEG_CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
 const GROK_URL_SESSION_KEY = 'grok-video-join.urls.v1';
-const VIDEO_RELAY_BASE = 'https://grokshareboard-video-relay.vercel.app/video';
-
 interface LocalVideo {
   id: string;
   postId: string;
@@ -138,6 +141,7 @@ export function VideoJoinTool() {
   const [isUrlDragging, setIsUrlDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [previewErrorIds, setPreviewErrorIds] = useState<Set<string>>(() => new Set());
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [output, setOutput] = useState<JoinOutput | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
@@ -182,6 +186,25 @@ export function VideoJoinTool() {
     const frameId = requestAnimationFrame(() => setGrokItems(parsed.valid.map((url) => ({ url, postId: extractGrokPostId(url)! }))));
     return () => cancelAnimationFrame(frameId);
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    grokItems.forEach((item) => {
+      void resolveGrokMedia(item.postId, controller.signal)
+        .then((media) => {
+          const playableUrl = isResolvedGrokVideo(media) ? buildGrokPlayableVideoUrl(media) : null;
+          if (!playableUrl) throw new Error('This Grok post does not contain a public video.');
+          setPreviewUrls((current) => ({ ...current, [item.postId]: playableUrl }));
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          setPreviewErrorIds((current) => new Set(current).add(item.postId));
+        });
+    });
+
+    return () => controller.abort();
+  }, [grokItems]);
 
   useEffect(() => {
     if (!isGuideOpen) return;
@@ -255,6 +278,17 @@ export function VideoJoinTool() {
     if (isBusy) return;
     releaseOutput();
     setVideos((current) => current.filter((video) => video.postId !== postId));
+    setPreviewUrls((current) => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setPreviewErrorIds((current) => {
+      if (!current.has(postId)) return current;
+      const next = new Set(current);
+      next.delete(postId);
+      return next;
+    });
     setGrokItems((current) => {
       const next = current.filter((item) => item.postId !== postId);
       persistGrokItems(next);
@@ -325,9 +359,17 @@ export function VideoJoinTool() {
     for (let index = 0; index < grokItems.length; index += 1) {
       const item = grokItems[index];
       setStatusMessage(`動画を取得しています（${index + 1}/${grokItems.length}）…`);
-      const response = await fetch(`${VIDEO_RELAY_BASE}/${item.postId}`, { cache: 'no-store' });
+      const resolvedMedia = await resolveGrokMedia(item.postId);
+      const playableUrl = isResolvedGrokVideo(resolvedMedia)
+        ? buildGrokPlayableVideoUrl(resolvedMedia)
+        : null;
+      if (!playableUrl) {
+        throw new Error(`動画${index + 1}はGrokの動画投稿として確認できませんでした。`);
+      }
+
+      const response = await fetch(playableUrl, { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error(`動画${index + 1}を取得できませんでした。Grokの個別ページでシェアボタンを押してから、もう一度お試しください。`);
+        throw new Error(`動画${index + 1}を取得できませんでした。Grokの個別ページで公開状態を確認してから、もう一度お試しください。`);
       }
 
       const contentType = response.headers.get('content-type') ?? '';
@@ -516,6 +558,7 @@ export function VideoJoinTool() {
     setGrokUrlText('');
     setGrokItems([]);
     setPreviewErrorIds(new Set());
+    setPreviewUrls({});
     setVideos([]);
     setPhase('idle');
     setProgress(0);
@@ -626,21 +669,27 @@ export function VideoJoinTool() {
                       >
                         <div className="grid gap-3 p-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                           <div>
-                            <video
-                              src={buildGrokPublicVideoUrl(item.postId)}
-                              muted
-                              controls
-                              preload="metadata"
-                              onLoadedMetadata={() => setPreviewErrorIds((current) => {
-                                if (!current.has(item.postId)) return current;
-                                const next = new Set(current);
-                                next.delete(item.postId);
-                                return next;
-                              })}
-                              onError={() => setPreviewErrorIds((current) => new Set(current).add(item.postId))}
-                              className="aspect-video w-full rounded-lg bg-black object-contain"
-                              aria-label={`動画${index + 1}のプレビュー`}
-                            />
+                            {previewUrls[item.postId] ? (
+                              <video
+                                src={previewUrls[item.postId]}
+                                muted
+                                controls
+                                preload="metadata"
+                                onLoadedMetadata={() => setPreviewErrorIds((current) => {
+                                  if (!current.has(item.postId)) return current;
+                                  const next = new Set(current);
+                                  next.delete(item.postId);
+                                  return next;
+                                })}
+                                onError={() => setPreviewErrorIds((current) => new Set(current).add(item.postId))}
+                                className="aspect-video w-full rounded-lg bg-black object-contain"
+                                aria-label={`動画${index + 1}のプレビュー`}
+                              />
+                            ) : (
+                              <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-black text-xs text-gray-500">
+                                {previewErrorIds.has(item.postId) ? '動画を確認できません' : '動画を確認中…'}
+                              </div>
+                            )}
                           </div>
                           <div className="flex min-w-0 flex-col">
                             <div className="flex items-start gap-2">
@@ -652,11 +701,11 @@ export function VideoJoinTool() {
                                   <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-2.5 py-2 text-[11px] leading-5 text-amber-100">
                                     <AlertTriangle className="mt-0.5 shrink-0 text-amber-400" size={14} />
                                     <p>
-                                      サムネイルが表示されません。
+                                      公開動画を確認できません。
                                       <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-bold text-amber-300 underline decoration-amber-500/70 underline-offset-2 transition hover:text-amber-200">
                                         Grokの個別ページを開き
                                       </a>
-                                      、シェアボタンを押してから、もう一度お試しください。
+                                      、シェア済みか確認してから、もう一度追加してください。
                                     </p>
                                   </div>
                                 )}
@@ -758,7 +807,7 @@ export function VideoJoinTool() {
 
         <section className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4 text-xs leading-6 text-gray-400 sm:p-5">
           <h2 className="flex items-center gap-2 font-bold text-emerald-200"><ShieldCheck size={17} /> プライバシーについて</h2>
-          <p className="mt-2">動画取得時のみGrok Share Boardの中継サーバーを通過します。中継サーバーは動画を保存・加工・キャッシュせず、結合処理と完成動画の生成はブラウザの一時メモリ内で行います。</p>
+          <p className="mt-2">Grok URLの確認にはGrok Share Boardの解決APIを利用します。新形式動画はGrokの公開CDNから直接取得し、旧形式動画だけ中継サーバーを通過します。中継サーバーは動画を保存・加工・キャッシュせず、結合処理と完成動画の生成はブラウザの一時メモリ内で行います。</p>
         </section>
       </main>
 

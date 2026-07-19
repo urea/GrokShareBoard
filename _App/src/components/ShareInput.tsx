@@ -3,7 +3,13 @@
 import React, { useState } from 'react';
 import { Loader2, Image as ImageIcon, AlertTriangle, Sparkles, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { buildGrokImageProxyUrl, buildGrokPublicVideoUrl, extractGrokPostId } from '@/lib/grokMedia';
+import {
+    buildGrokImageProxyUrl,
+    buildGrokPublicVideoUrl,
+    extractGrokPostId,
+    isResolvedGrokVideo,
+    resolveGrokMedia,
+} from '@/lib/grokMedia';
 
 // Define local interface for Preview Data
 interface PreviewData {
@@ -114,13 +120,23 @@ export default function ShareInput({ onPostCreated }: { onPostCreated: () => voi
                 return;
             }
 
-            // Construct public URLs
-            // Video: https://imagine-public.x.ai/imagine-public/share-videos/[UUID].mp4
-            // Image (Thumbnail): https://imagine-public.x.ai/imagine-public/share-videos/[UUID]_thumbnail.jpg
-            const videoUrl = buildGrokPublicVideoUrl(uuid);
-            const imageUrl = buildGrokImageProxyUrl(uuid);
+            // Resolve the actual Grok media URLs first. New isV2 posts live on
+            // assets.grok.com and no longer populate the predictable legacy paths.
+            let videoUrl = buildGrokPublicVideoUrl(uuid);
+            let imageUrl = buildGrokImageProxyUrl(uuid);
+            try {
+                const resolvedMedia = await resolveGrokMedia(uuid);
+                videoUrl = isResolvedGrokVideo(resolvedMedia) && resolvedMedia.mediaUrl
+                    ? resolvedMedia.mediaUrl
+                    : '';
+                imageUrl = resolvedMedia.thumbnailImageUrl
+                    || (!isResolvedGrokVideo(resolvedMedia) ? resolvedMedia.mediaUrl : null)
+                    || imageUrl;
+            } catch (resolveError) {
+                console.warn('Grok media resolver failed; trying legacy preview URLs.', resolveError);
+                setError('Grokのメディア情報を取得できなかったため、従来形式でも確認しています。表示されない場合は少し待って再確認してください。');
+            }
 
-            // Unconditionally set the expected URLs. (Real-time 404 detection is handled by the UI tags)
             const mockPreview: PreviewData = {
                 url: url,
                 videoUrl: videoUrl,
