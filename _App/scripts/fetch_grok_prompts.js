@@ -8,6 +8,14 @@ const REPO_ROOT = path.resolve(APP_DIR, '..');
 const LOCAL_ENV_PATH = path.resolve(REPO_ROOT, '_Dev', 'Tools', 'db-admin.env');
 
 const TERMINAL_STATUSES = new Set(['no_prompt', 'source_missing', 'access_denied']);
+const ASSET_GENERATION_KINDS = [
+  'textToImage',
+  'imageToImage',
+  'textToVideo',
+  'imageToVideo',
+  'referenceToVideo',
+  'videoExtension',
+];
 
 function parseBoolean(value) {
   if (typeof value === 'boolean') return value;
@@ -21,7 +29,9 @@ function parseArgs(argv) {
     all: false,
     applyNsfw: false,
     retryAccessDenied: false,
+    retryNoPrompt: false,
     includePrompt: false,
+    grokId: null,
     limit: 100,
     delayMs: 750,
     maxSourceDepth: 3,
@@ -35,7 +45,11 @@ function parseArgs(argv) {
     else if (arg === '--apply-nsfw') args.applyNsfw = true;
     else if (arg === '--retry-access-denied') args.retryAccessDenied = true;
     else if (arg === '--no-retry-access-denied') args.retryAccessDenied = false;
+    else if (arg === '--retry-no-prompt') args.retryNoPrompt = true;
+    else if (arg === '--no-retry-no-prompt') args.retryNoPrompt = false;
     else if (arg === '--include-prompt') args.includePrompt = true;
+    else if (arg === '--id') args.grokId = normalizeUuid(argv[++i]);
+    else if (arg.startsWith('--id=')) args.grokId = normalizeUuid(arg.slice('--id='.length));
     else if (arg === '--limit') args.limit = Number(argv[++i]);
     else if (arg.startsWith('--limit=')) args.limit = Number(arg.split('=')[1]);
     else if (arg === '--delay-ms') args.delayMs = Number(argv[++i]);
@@ -59,6 +73,9 @@ function parseArgs(argv) {
   if (!Number.isInteger(args.maxSourceDepth) || args.maxSourceDepth < 0 || args.maxSourceDepth > 10) {
     throw new Error('--max-source-depth must be an integer between 0 and 10');
   }
+  if (argv.some((arg) => arg === '--id' || arg.startsWith('--id=')) && !args.grokId) {
+    throw new Error('--id must contain a valid Grok UUID');
+  }
 
   return args;
 }
@@ -80,9 +97,12 @@ Options:
   --limit N              Maximum rows to process. Default: 100, max: 5000.
   --delay-ms N           Minimum delay between Grok API calls. Default: 750.
   --all                  Include every row regardless of current fetch status.
+  --id UUID              Process only the matching Grok post, including terminal statuses.
   --max-source-depth N   Follow originalPost ancestry up to N levels. Default: 3.
   --retry-access-denied     Include access_denied rows in the normal target set.
   --no-retry-access-denied  Skip access_denied rows.
+  --retry-no-prompt         Include no_prompt rows for V2 migration backfills.
+  --no-retry-no-prompt      Skip no_prompt rows.
   --apply-nsfw           When Grok rRated is true, set posts.nsfw = true. Never sets false.
   --include-prompt       Include full prompt text in the local JSON report. Do not use in CI.
 `);
@@ -139,10 +159,13 @@ function createRateLimitedFetcher(delayMs) {
   };
 }
 
-async function fetchGrokPost(id) {
-  const res = await fetch('https://grok.com/rest/media/post/get', {
+async function fetchGrokMediaPost(id, fetchImpl = fetch) {
+  const res = await fetchImpl('https://grok.com/rest/media/post/get', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': 'GrokShareBoard-PromptFetcher/2.0',
+    },
     body: JSON.stringify({ id }),
   });
 
@@ -154,7 +177,132 @@ async function fetchGrokPost(id) {
     // Keep the raw response for classification below.
   }
 
-  return { status: res.status, ok: res.ok, text, json };
+  return { status: res.status, ok: res.ok, text, json, origin: 'media_post' };
+}
+
+async function fetchGrokAsset(id, fetchImpl = fetch) {
+  const res = await fetchImpl(`https://grok.com/rest/assets/${encodeURIComponent(id)}`, {
+    method: 'GET',
+    headers: { 'user-agent': 'GrokShareBoard-PromptFetcher/2.0' },
+  });
+
+  const text = await res.text();
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // Keep the raw response for fallback/classification below.
+  }
+
+  return { status: res.status, ok: res.ok, text, json, origin: 'asset' };
+}
+
+function getAssetGenerationInput(asset) {
+  const mediaGenInput = asset?.mediaGenInput;
+  if (!mediaGenInput || typeof mediaGenInput !== 'object') return null;
+
+  for (const kind of ASSET_GENERATION_KINDS) {
+    const input = mediaGenInput[kind];
+    if (input && typeof input === 'object') return { kind, input };
+  }
+  return null;
+}
+
+function getAssetInputIds(asset, generationInput) {
+  const rawIds = [
+    ...(Array.isArray(generationInput?.input?.inputAssets)
+      ? generationInput.input.inputAssets
+      : []),
+    generationInput?.input?.hydratedContext?.parentPostId,
+    asset?.mediaGenInput?.hydratedContext?.parentPostId,
+  ];
+
+  return [...new Set(rawIds
+    .map((value) => normalizeUuid(value?.assetId || value?.id || value))
+    .filter(Boolean))];
+}
+
+function grokPostFromAsset(asset, requestedId) {
+  if (!asset || typeof asset !== 'object') return null;
+  const generationInput = getAssetGenerationInput(asset);
+  const prompt = generationInput?.input?.prompt?.trim()
+    ? generationInput.input.prompt
+    : null;
+  const assetInputIds = getAssetInputIds(asset, generationInput);
+  const mimeType = asset.mimeType || null;
+  const mediaType = String(mimeType || '').startsWith('video/')
+    ? 'MEDIA_POST_TYPE_VIDEO'
+    : String(mimeType || '').startsWith('image/')
+      ? 'MEDIA_POST_TYPE_IMAGE'
+      : null;
+
+  return {
+    id: normalizeUuid(asset.assetId) || normalizeUuid(requestedId),
+    prompt,
+    originalPrompt: prompt,
+    originalPostId: assetInputIds[0] || null,
+    assetInputIds,
+    mediaType,
+    mimeType,
+    rRated: asset.rRated === true,
+    isV2: true,
+    generationKind: generationInput?.kind || null,
+  };
+}
+
+async function fetchGrokPost(id, fetchImpl = fetch) {
+  let mediaResult = null;
+  let mediaError = null;
+  try {
+    mediaResult = await fetchGrokMediaPost(id, fetchImpl);
+  } catch (error) {
+    mediaError = error;
+  }
+
+  const mediaPost = mediaResult?.json?.post;
+  if (mediaResult?.ok && mediaPost?.prompt?.trim()) {
+    return {
+      ...mediaResult,
+      mediaStatus: mediaResult.status,
+      assetStatus: null,
+    };
+  }
+
+  let assetResult = null;
+  let assetError = null;
+  try {
+    assetResult = await fetchGrokAsset(id, fetchImpl);
+  } catch (error) {
+    assetError = error;
+  }
+
+  if (assetResult?.ok && assetResult.json) {
+    const assetPost = grokPostFromAsset(assetResult.json, id);
+    if (assetPost) {
+      return {
+        ...assetResult,
+        json: { post: assetPost },
+        mediaStatus: mediaResult?.status ?? null,
+        assetStatus: assetResult.status,
+      };
+    }
+  }
+
+  if (mediaResult) {
+    return {
+      ...mediaResult,
+      mediaStatus: mediaResult.status,
+      assetStatus: assetResult?.status ?? null,
+    };
+  }
+  if (assetResult) {
+    return {
+      ...assetResult,
+      mediaStatus: null,
+      assetStatus: assetResult.status,
+    };
+  }
+  throw mediaError || assetError || new Error('Grok fetch failed without a response');
 }
 
 async function ensurePromptSourcesSchema(client) {
@@ -235,10 +383,13 @@ async function loadTargets(client, args) {
   const params = [];
   const clauses = [];
 
-  if (!args.all) {
-    const statuses = args.retryAccessDenied
-      ? ['pending', 'failed', 'access_denied']
-      : ['pending', 'failed'];
+  if (args.grokId) {
+    params.push(args.grokId);
+    clauses.push(`(id = $${params.length}::uuid or url ilike '%' || $${params.length} || '%')`);
+  } else if (!args.all) {
+    const statuses = ['pending', 'failed'];
+    if (args.retryAccessDenied) statuses.push('access_denied');
+    if (args.retryNoPrompt) statuses.push('no_prompt');
     params.push(statuses);
     clauses.push(`coalesce(prompt_fetch_status, 'pending') = any($${params.length})`);
   }
@@ -362,7 +513,8 @@ function getOriginalPostCandidate(grokPost) {
       || grokPost.original_post_id
       || grokPost.parentPostId
       || grokPost.originalPost?.id
-      || grokPost.original_post?.id,
+      || grokPost.original_post?.id
+      || grokPost.assetInputIds?.[0],
   );
 
   if (originalId && originalId !== selfId) {
@@ -398,11 +550,13 @@ function buildSourceReportRow(source, includePrompt) {
     grokPostId: source.grokPostId,
     parentGrokPostId: source.parentGrokPostId,
     mediaType: source.mediaType,
+    generationKind: source.generationKind,
     fetchStatus: source.fetchStatus,
     httpStatus: source.httpStatus,
     promptLength: source.prompt?.length || 0,
     promptHash: source.prompt ? hashText(source.prompt) : null,
     error: source.error,
+    fetchOrigin: source.fetchOrigin,
   };
   if (includePrompt && source.prompt) reportRow.prompt = source.prompt;
   return reportRow;
@@ -423,14 +577,18 @@ async function collectPromptSources(rootGrokPost, grokFetch, args) {
     let fetchStatus = null;
     let error = null;
     let httpStatus = null;
+    let fetchOrigin = sourcePost ? 'embedded' : null;
+    let generationKind = sourcePost?.generationKind || null;
 
     if (!sourcePost?.prompt?.trim()) {
       const fetched = await grokFetch(sourceId);
       httpStatus = fetched.status;
+      fetchOrigin = fetched.origin || null;
       const fetchedPost = fetched.json?.post;
 
       if (fetched.ok && fetchedPost) {
         sourcePost = fetchedPost;
+        generationKind = fetchedPost.generationKind || null;
       } else {
         const message = fetched.json?.message || fetched.text.slice(0, 240) || 'empty response';
         const classified = classifyFailure(fetched.status, message);
@@ -445,12 +603,18 @@ async function collectPromptSources(rootGrokPost, grokFetch, args) {
     sources.push({
       depth,
       grokPostId: sourceId,
-      parentGrokPostId: normalizeUuid(sourcePost?.originalPostId || sourcePost?.original_post_id),
+      parentGrokPostId: normalizeUuid(
+        sourcePost?.originalPostId
+          || sourcePost?.original_post_id
+          || sourcePost?.assetInputIds?.[0],
+      ),
       mediaType: sourcePost?.mediaType || null,
+      generationKind,
       prompt,
       fetchStatus,
       error,
       httpStatus,
+      fetchOrigin,
     });
 
     if (!sourcePost) break;
@@ -546,7 +710,9 @@ function createReport(args) {
       all: args.all,
       applyNsfw: args.applyNsfw,
       retryAccessDenied: args.retryAccessDenied,
+      retryNoPrompt: args.retryNoPrompt,
       includePrompt: args.includePrompt,
+      grokId: args.grokId,
       limit: args.limit,
       delayMs: args.delayMs,
       maxSourceDepth: args.maxSourceDepth,
@@ -561,6 +727,13 @@ async function main() {
   if (parseBoolean(process.env.APPLY_NSFW)) args.applyNsfw = true;
   if (process.env.RETRY_ACCESS_DENIED !== undefined && process.env.RETRY_ACCESS_DENIED !== '') {
     args.retryAccessDenied = parseBoolean(process.env.RETRY_ACCESS_DENIED);
+  }
+  if (process.env.RETRY_NO_PROMPT !== undefined && process.env.RETRY_NO_PROMPT !== '') {
+    args.retryNoPrompt = parseBoolean(process.env.RETRY_NO_PROMPT);
+  }
+  if (!args.grokId && process.env.GROK_ID) {
+    args.grokId = normalizeUuid(process.env.GROK_ID);
+    if (!args.grokId) throw new Error('GROK_ID must contain a valid Grok UUID');
   }
   if (process.env.MAX_SOURCE_DEPTH !== undefined && process.env.MAX_SOURCE_DEPTH !== '') {
     args.maxSourceDepth = Number(process.env.MAX_SOURCE_DEPTH);
@@ -596,11 +769,15 @@ async function main() {
         descriptionLength: post.description?.trim()?.length || 0,
         action: null,
         httpStatus: null,
+        mediaHttpStatus: null,
+        assetHttpStatus: null,
+        fetchOrigin: null,
         fetchStatus: null,
         promptLength: 0,
         promptHash: null,
         rRated: null,
         mediaType: null,
+        generationKind: null,
         sourceRows: 0,
         sourceFetched: 0,
         sources: [],
@@ -610,6 +787,9 @@ async function main() {
       try {
         const fetched = await grokFetch(grokId);
         row.httpStatus = fetched.status;
+        row.mediaHttpStatus = fetched.mediaStatus;
+        row.assetHttpStatus = fetched.assetStatus;
+        row.fetchOrigin = fetched.origin || null;
 
         const grokPost = fetched.json?.post;
         if (!fetched.ok || !grokPost) {
@@ -629,6 +809,7 @@ async function main() {
           row.promptHash = prompt ? hashText(prompt) : null;
           row.rRated = grokPost.rRated === true;
           row.mediaType = grokPost.mediaType || null;
+          row.generationKind = grokPost.generationKind || null;
           if (args.includePrompt && prompt) row.prompt = prompt;
           if (row.rRated) report.summary.nsfwCandidates += 1;
 
@@ -670,7 +851,7 @@ async function main() {
       }
 
       report.rows.push(row);
-      console.log(`${row.index}/${targets.length} ${row.postId} ${row.action} fetch=${row.fetchStatus} http=${row.httpStatus ?? 'n/a'} prompt_len=${row.promptLength} source_rows=${row.sourceRows} source_fetched=${row.sourceFetched}`);
+      console.log(`${row.index}/${targets.length} ${row.postId} ${row.action} fetch=${row.fetchStatus} origin=${row.fetchOrigin ?? 'n/a'} media_http=${row.mediaHttpStatus ?? 'n/a'} asset_http=${row.assetHttpStatus ?? 'n/a'} prompt_len=${row.promptLength} source_rows=${row.sourceRows} source_fetched=${row.sourceFetched}`);
     }
   } finally {
     await client.end().catch(() => {});
@@ -689,7 +870,19 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  ASSET_GENERATION_KINDS,
+  fetchGrokPost,
+  getAssetGenerationInput,
+  getAssetInputIds,
+  grokPostFromAsset,
+  normalizeUuid,
+  parseArgs,
+};

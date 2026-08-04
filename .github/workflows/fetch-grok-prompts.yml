@@ -17,6 +17,15 @@ on:
         description: "Maximum originalPost ancestry depth to fetch"
         required: false
         default: "3"
+      grok_id:
+        description: "Process one Grok post UUID, including terminal statuses"
+        required: false
+        default: ""
+      retry_no_prompt:
+        description: "Retry no_prompt rows after Grok API migrations"
+        type: boolean
+        required: false
+        default: false
       retry_access_denied:
         description: "Retry access_denied rows"
         type: boolean
@@ -59,6 +68,8 @@ jobs:
           LIMIT: ${{ inputs.limit || '100' }}
           DELAY_MS: ${{ inputs.delay_ms || '750' }}
           MAX_SOURCE_DEPTH: ${{ inputs.max_source_depth || '3' }}
+          GROK_ID: ${{ inputs.grok_id }}
+          RETRY_NO_PROMPT: ${{ inputs.retry_no_prompt }}
           RETRY_ACCESS_DENIED: ${{ inputs.retry_access_denied }}
           APPLY_NSFW: ${{ inputs.apply_nsfw || false }}
         run: |
@@ -68,6 +79,14 @@ jobs:
           fi
 
           COMMAND=(node scripts/fetch_grok_prompts.js --apply --limit "$LIMIT" --delay-ms "$DELAY_MS" --max-source-depth "$MAX_SOURCE_DEPTH")
+
+          if [ -n "$GROK_ID" ]; then
+            COMMAND+=(--id "$GROK_ID")
+          fi
+
+          if [ "$RETRY_NO_PROMPT" = "true" ]; then
+            COMMAND+=(--retry-no-prompt)
+          fi
 
           if [ "$RETRY_ACCESS_DENIED" = "true" ]; then
             COMMAND+=(--retry-access-denied)
