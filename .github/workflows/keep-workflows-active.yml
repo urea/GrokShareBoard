@@ -1,0 +1,60 @@
+name: Keep scheduled workflows active
+
+on:
+  schedule:
+    # Monday 12:43 JST. Refresh well before GitHub's 60-day inactivity cutoff.
+    - cron: "43 3 * * 1"
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/keep-workflows-active.yml"
+
+permissions: {}
+
+concurrency:
+  group: scheduled-workflow-keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    if: github.repository == 'urea/GrokShareBoard' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Refresh scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for workflow in fetch-grok-prompts.yml keep-workflows-active.yml; do
+            endpoint="repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}"
+            state="$(gh api "$endpoint" --jq '.state')"
+
+            case "$state" in
+              active|disabled_inactivity)
+                # Enable also refreshes an already-active workflow's inactivity timer.
+                # Use the official API directly; no third-party action or dummy commits.
+                gh api --method PUT "${endpoint}/enable"
+                state="$(gh api "$endpoint" --jq '.state')"
+                if [ "$state" != "active" ]; then
+                  echo "::error::${workflow}: expected active after refresh, got ${state}"
+                  exit 1
+                fi
+                echo "${workflow}: active (refreshed)"
+                echo "- ${workflow}: active (refreshed)" >> "$GITHUB_STEP_SUMMARY"
+                ;;
+              disabled_manually)
+                echo "::notice::${workflow}: left disabled because it was manually disabled"
+                echo "- ${workflow}: manually disabled; left unchanged" >> "$GITHUB_STEP_SUMMARY"
+                ;;
+              *)
+                echo "::error::${workflow}: unexpected workflow state ${state}; left unchanged"
+                exit 1
+                ;;
+            esac
+          done

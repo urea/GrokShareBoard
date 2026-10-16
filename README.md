@@ -59,3 +59,7 @@
 `.github/workflows/fetch-grok-prompts.yml` が1時間ごとに実行され、`posts.prompt_fetch_status` が `pending` または `failed` の投稿を対象にGrok側APIから元プロンプトを取得します。従来のMedia Post APIでプロンプトが空になるV2作品は、公開Asset APIの`mediaGenInput`へフォールバックし、`inputAssets`から元画像・上位作品も追跡します。`access_denied` はGrok側で公開化されていない可能性が高いため、通常の再取得対象から外します。ユーザーがGrok側で「シェア」または「Xに投稿」を押した後、詳細画面の「公開化済み・再取得を依頼」ボタンで `pending` に戻すことで、次回の自動取得対象になります。`no_prompt`、`source_missing` も終端ステータスとして通常の再取得対象から外しますが、Grok側の仕様移行時は手動ワークフローの`retry_no_prompt`で一括再確認できます。
 
 このワークフローにはGitHub repository secret `DATABASE_URL` が必要です。Actionsログにプロンプト本文は出力せず、取得件数・HTTPステータス・本文長・ハッシュのみを記録します。
+
+GitHubの公開リポジトリでは、60日間リポジトリの活動がないと定期ワークフローが自動停止します。再発防止として `.github/workflows/keep-workflows-active.yml` が毎週月曜12:43（日本時間）に実行され、公式の Enable workflow API で取得ワークフローと自身の有効状態を更新します。保守用の短期 `GITHUB_TOKEN` にだけ `actions: write` を与え、コード・DBの変更や保守用コミットは行いません。手動で無効にしたワークフローは再開しません。
+
+保守ジョブは自身のファイル更新時にも即時実行し、Actionsの `Keep scheduled workflows active` のログ・実行サマリーで成否を確認できます。この保守自体が長期間止まった場合は、GitHubのActions画面で同ワークフローを有効化して `Run workflow` を実行してください。取得処理の即時再開には `Fetch Grok prompts` も手動実行します。APIによる定期更新は既存の [Workflow Keepalive実装](https://github.com/liskin/gh-workflow-keepalive) と同じ方式ですが、GitHubによる60日後の継続を保証するものではないため、停止時はこの手順で復旧します。
